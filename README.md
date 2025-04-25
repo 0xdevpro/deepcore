@@ -23,7 +23,7 @@ DeepCore provides a series of powerful features that enable developers to easily
 
 - **Multi-model Support** - Seamless integration with various AI models, including GPT-4, Claude, local models, etc.
 - **Web3 Native Tools** - Rich blockchain interaction tools supporting smart contract calls and on-chain data analysis
-- **MCP Architecture** - Innovative Model-Controller-Protocol architecture, separating agent logic from implementation
+- **MCP Architecture** - Innovative Model-Context-Protocol architecture, separating agent logic from implementation
 - **Wallet Authentication** - Support for various Web3 wallet login and authentication mechanisms
 - **Cross-chain Support** - Built-in support for multiple blockchain networks, including Ethereum, Polygon, Arbitrum, etc.
 - **Visual Monitoring** - Real-time monitoring and analysis of agent execution processes and performance
@@ -44,7 +44,7 @@ DeepCore's advantage over other solutions lies in providing a complete solution 
 
 ## Technical Architecture
 
-DeepCore is built on the innovative MCP (Model-Controller-Protocol) architecture, a design pattern that enables us to build highly flexible and powerful intelligent agent systems.
+DeepCore is built on the innovative MCP (Model-Context-Protocol) architecture, a design pattern that enables us to build highly flexible and powerful intelligent agent systems.
 
 <p>
   <img src="./docs/deepcore_architecture.jpg" alt="DeepCore Architecture" width="800"/>
@@ -66,7 +66,7 @@ The top layer provides a marketplace of specialized agents for different purpose
 The core protocol layer is where the main agent intelligence and orchestration happens:
 
 #### Service Components
-- **MCP Service** - Implements the Model-Controller-Protocol pattern
+- **MCP Service** - Implements the Model-Context-Protocol pattern
 - **SSE (Server-Sent Events)** - Provides real-time communication
 - **CMD** - Command interface for agent control
 - **HTTP Service** - RESTful API endpoints for integrations
