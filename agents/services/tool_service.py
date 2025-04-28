@@ -114,7 +114,7 @@ async def create_tool(
         )
 
         session.add(new_tool)
-        await session.commit()
+        await session.flush()
         return tool_to_dto(new_tool, user)
     except CustomAgentException:
         raise
@@ -148,7 +148,6 @@ async def create_tools_batch(
                 session=session
             )
             created_tools.append(tool)
-        
         return created_tools
     except CustomAgentException:
         raise
@@ -168,7 +167,7 @@ async def update_tool(
         path: Optional[str] = None,
         method: Optional[str] = None,
         parameters: Optional[Dict] = None,
-        auth_config: Optional[AuthConfig] = None,
+        auth_config: Optional[AuthConfig | List[AuthConfig]] = None,
         icon: Optional[str] = None,
         is_stream: Optional[bool] = None,
         output_format: Optional[Dict] = None

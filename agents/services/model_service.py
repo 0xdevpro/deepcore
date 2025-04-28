@@ -173,28 +173,48 @@ async def get_model(
     return model_to_dto(model, user)
 
 async def get_model_with_key(
-        model_id: int,
+        identifier: int | str,
         user: dict,
         session: AsyncSession = Depends(get_db)
 ) -> Optional[tuple[ModelDTO, str]]:
     """
     Internal method to get model with decrypted API key
     Returns tuple of (model_dto, decrypted_api_key)
+    
+    Args:
+        identifier: Model ID (int) or name (str)
+        user: User info for authentication
+        session: Database session
     """
     try:
         if user:
-            stmt = select(Model).where(
-                Model.id == model_id,
-                or_(
-                    Model.tenant_id == user.get('tenant_id'),
+            if isinstance(identifier, int):
+                stmt = select(Model).where(
+                    Model.id == identifier,
+                    or_(
+                        Model.tenant_id == user.get('tenant_id'),
+                        Model.is_public == True
+                    )
+                )
+            else:
+                stmt = select(Model).where(
+                    Model.model_name == identifier,
+                    or_(
+                        Model.tenant_id == user.get('tenant_id'),
+                        Model.is_public == True
+                    )
+                )
+        else:
+            if isinstance(identifier, int):
+                stmt = select(Model).where(
+                    Model.id == identifier,
                     Model.is_public == True
                 )
-            )
-        else:
-            stmt = select(Model).where(
-                Model.id == model_id,
-                Model.is_public == True
-            )
+            else:
+                stmt = select(Model).where(
+                    Model.model_name == identifier,
+                    Model.is_public == True
+                )
             
         result = await session.execute(stmt)
         model = result.scalar_one_or_none()

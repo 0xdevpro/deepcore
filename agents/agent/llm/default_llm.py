@@ -1,4 +1,4 @@
-from langchain_openai import ChatOpenAI
+from langchain_xai import ChatXAI
 
 from agents.agent.llm.model import Model
 from agents.common.config import SETTINGS
@@ -6,9 +6,9 @@ from agents.common.config import SETTINGS
 
 class ChatGPT(Model):
     """Chat GPT model"""
-    use_model = ChatOpenAI(
-        openai_api_key=SETTINGS.OPENAI_API_KEY,
-        base_url=SETTINGS.OPENAI_BASE_URL,
+    use_model = ChatXAI(
+        xai_api_key=SETTINGS.OPENAI_API_KEY,
+        xai_api_base=SETTINGS.OPENAI_BASE_URL,
         model_name=SETTINGS.MODEL_NAME,
         temperature=SETTINGS.MODEL_TEMPERATURE,
     )
