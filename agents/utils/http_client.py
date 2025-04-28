@@ -139,7 +139,28 @@ class AsyncHttpClient:
 
     async def _handle_normal_response(self, response: aiohttp.ClientResponse) -> Union[Dict, str]:
         """Handle normal (non-streaming) response"""
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except aiohttp.ClientResponseError as e:
+            # Try to get error message from response body
+            content_type = response.headers.get('Content-Type', '')
+            try:
+                if 'application/json' in content_type:
+                    error_body = await response.json()
+                    error_msg = str(error_body)
+                else:
+                    error_body = await response.text()
+                    error_msg = error_body
+            except Exception:
+                error_msg = str(e)
+            
+            # Create a new exception with the error message from response body
+            raise aiohttp.ClientResponseError(
+                response.request_info,
+                response.history,
+                status=response.status,
+                message=error_msg
+            )
         
         content_type = response.headers.get('Content-Type', '')
         if 'application/json' in content_type:

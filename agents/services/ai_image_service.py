@@ -154,6 +154,7 @@ class AIImageService:
             task.prompt = prompt_tpl.format(
                 json_twitter_user_info=json_twitter_user_info
             )
+            task.base64_image_list = base64_img_list
 
         background_tasks.add_task(backgroud_run_aigc_img_task, task)
 
