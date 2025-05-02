@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = ""
     MODEL_NAME: str = "gpt-4o-2024-11-20"
+    MCP_MODEL_NAME: str = "grok-3-mini-beta"
     MODEL_TEMPERATURE:float = 0.1
 
     COIN_HOST: str = ""

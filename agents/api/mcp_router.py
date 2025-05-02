@@ -1,9 +1,11 @@
 import logging
+import uuid
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Body, Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import StreamingResponse
 
 from agents.common.error_messages import get_error_message
 from agents.common.response import RestResponse
@@ -58,6 +60,20 @@ class MCPStoreQueryParams(BaseModel):
     store_type: Optional[str] = None
 
 
+class GenerateToolsRequest(BaseModel):
+    """Generate Tools Request"""
+    user_input: str
+    conversation_id: Optional[str] = Field(default_factory=lambda: str(uuid.uuid4()))
+
+
+class CreateToolsAndMCPServerRequest(BaseModel):
+    """Create Tools and MCP Server Request"""
+    tools: List[dict]
+    mcp_name: str
+    description: Optional[str] = None
+    icon: Optional[str] = None
+
+
 @router.post("/mcp/create", summary="Create MCP Server")
 async def create_mcp_server(
     request: CreateMCPServerRequest,
@@ -80,6 +96,7 @@ async def create_mcp_server(
             session=session,
             description=request.description
         )
+        await session.commit()
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error creating MCP server: {str(e)}", exc_info=True)
@@ -410,6 +427,77 @@ async def delete_mcp_store(
         return RestResponse(code=e.error_code, msg=str(e))
     except Exception as e:
         logger.error(f"Unexpected error deleting MCP store: {str(e)}", exc_info=True)
+        return RestResponse(
+            code=ErrorCode.INTERNAL_ERROR,
+            msg=get_error_message(ErrorCode.INTERNAL_ERROR)
+        )
+
+
+@router.get("/mcp/generate-tools", summary="Generate Tools from User Input")
+async def generate_tools(
+    user_input: str,
+    conversation_id: Optional[str] = None,
+    user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db)
+):
+    """
+    Generate tool list from user input using LLM
+    
+    Parameters:
+    - **user_input**: User's input text
+    - **conversation_id**: Conversation ID for context (optional)
+    """
+    try:
+        if not conversation_id:
+            conversation_id = str(uuid.uuid4())
+            
+        result = mcp_service.generate_tools_from_input(
+            user_input=user_input,
+            conversation_id=conversation_id,
+            user=user,
+            session=session
+        )
+        return StreamingResponse(content=result, media_type="text/event-stream")
+    except CustomAgentException as e:
+        logger.error(f"Error generating tools: {str(e)}", exc_info=True)
+        return RestResponse(code=e.error_code, msg=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error generating tools: {str(e)}", exc_info=True)
+        return RestResponse(
+            code=ErrorCode.INTERNAL_ERROR,
+            msg=get_error_message(ErrorCode.INTERNAL_ERROR)
+        )
+
+
+@router.post("/mcp/create-with-tools", summary="Create Tools and MCP Server")
+async def create_tools_and_mcp_server(
+    request: CreateToolsAndMCPServerRequest,
+    user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db)
+):
+    """
+    Create multiple tools and an MCP server in one operation
+    
+    Parameters:
+    - **tools**: List of tool configurations
+    - **mcp_name**: Name for the new MCP server
+    - **description**: Optional MCP service description
+    """
+    try:
+        result = await mcp_service.create_tools_and_mcp_server(
+            tools=request.tools,
+            mcp_name=request.mcp_name,
+            user=user,
+            session=session,
+            description=request.description,
+            icon=request.icon
+        )
+        return RestResponse(data=result)
+    except CustomAgentException as e:
+        logger.error(f"Error creating tools and MCP server: {str(e)}", exc_info=True)
+        return RestResponse(code=e.error_code, msg=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error creating tools and MCP server: {str(e)}", exc_info=True)
         return RestResponse(
             code=ErrorCode.INTERNAL_ERROR,
             msg=get_error_message(ErrorCode.INTERNAL_ERROR)

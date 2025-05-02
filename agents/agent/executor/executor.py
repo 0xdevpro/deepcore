@@ -36,6 +36,7 @@ class AgentExecutor(ABC):
             tokenizer: Optional[Any] = TikToken(),
             long_term_memory: Optional[Any] = None,
             stop_condition: Optional[str] = None,
+            max_history_length: int = 25000,
             *args,
             **kwargs,
     ):
@@ -78,20 +79,52 @@ class AgentExecutor(ABC):
 
 
     def add_memory_object(self, memory_list: list[MemoryObject]):
-        """Add a memory object to the agent's memory."""
+        """Add a memory object to the agent's memory, with context trimming based on max_history_length."""
         if not memory_list:
             return
 
-        history = ''
-        for index, memory in enumerate(memory_list):
-            input_hint = ''
-            if memory.temp_data and "wallet_signature" not in memory.temp_data:
-                input_hint = f'User Input Hint: {json.dumps(memory.temp_data, ensure_ascii=False)}\n'
+        # Sort memory by time ascending (oldest first)
+        memory_list = sorted(memory_list, key=lambda m: m.time)
+        max_tokens = getattr(self, 'max_history_length', 25000)
+        tokenizer = self.tokenizer
 
-            history += (f'Question {index+1}, Time: {memory.time.strftime("%Y-%m-%d %H:%M:%S %Z")}\n'
-                        f'User: {memory.input.strip()}\n'
-                        f'{input_hint}'
-                        f'Assistant: {memory.output.strip() if memory.output else "..."}\n\n')
+        # Helper to build history string and count tokens
+        def build_history(memories):
+            history = ''
+            for index, memory in enumerate(memories):
+                input_hint = ''
+                if hasattr(memory, 'temp_data') and memory.temp_data and "wallet_signature" not in memory.temp_data:
+                    input_hint = f'User Input Hint: {json.dumps(memory.temp_data, ensure_ascii=False)}\n'
+                output_str = memory.get_output_to_string() if hasattr(memory, 'get_output_to_string') else (memory.output if memory.output else "...")
+                history += (f'Question {index+1}, Time: {memory.time.strftime("%Y-%m-%d %H:%M:%S %Z")}\n'
+                            f'User: {memory.input.strip()}\n'
+                            f'{input_hint}'
+                            f'Assistant: {output_str.strip() if output_str else "..."}\n\n')
+            return history
+
+        # Step 1: Try with all original outputs
+        history = build_history(memory_list)
+        total_tokens = tokenizer.count_tokens(history)
+
+        # Step 2: If over limit, start trimming outputs (oldest first)
+        if total_tokens > max_tokens:
+            trimmed = False
+            for memory in memory_list:
+                if memory.output and memory.output != "...":
+                    memory.output = "..."  # Trim output
+                    history = build_history(memory_list)
+                    total_tokens = tokenizer.count_tokens(history)
+                    if total_tokens <= max_tokens:
+                        trimmed = True
+                        break
+            # Step 3: If still over limit, start dropping oldest memories
+            if not trimmed and total_tokens > max_tokens:
+                while memory_list and total_tokens > max_tokens:
+                    memory_list.pop(0)  # Remove oldest
+                    history = build_history(memory_list)
+                    total_tokens = tokenizer.count_tokens(history)
+
+        # Step 4: Add to short memory
         self.short_memory.add(
             role="History Question\n",
             content=history,

@@ -52,7 +52,7 @@ class ToolInfo(BaseModel):
     origin: Optional[str] = Field(..., description="API origin")
     path: str = Field(..., description="API path")
     method: str = Field(..., description="HTTP method")
-    auth_config: Optional[AuthConfig] = Field(None, description="Authentication configuration")
+    auth_config: Optional[AuthConfig | List[AuthConfig]] = Field(None, description="Authentication configuration")
     parameters: Dict = Field(default_factory=dict, description="API parameters including header, query, path, and body")
     description: Optional[str] = Field(None, description="Description of the tool")
     icon: Optional[str] = Field(None, description="Icon URL of the tool")
@@ -169,7 +169,7 @@ class APIToolData(BaseModel):
     path: str = Field(..., description="API path")
     method: str = Field(..., description="HTTP method")
     parameters: Dict = Field(default_factory=dict, description="API parameters including header, query, path, and body")
-    auth_config: Optional[AuthConfig] = Field(None, description="Authentication configuration")
+    auth_config: Optional[AuthConfig | List[AuthConfig]] = Field(None, description="Authentication configuration")
     icon: Optional[str] = Field(None, description="Icon URL of the tool")
     is_stream: Optional[bool] = Field(False, description="Whether the API returns a stream response")
     output_format: Optional[Dict] = Field(None, description="JSON configuration for formatting API output")
@@ -189,7 +189,7 @@ class ToolUpdate(BaseModel):
     path: Optional[str] = Field(None, description="Optional new API path")
     method: Optional[str] = Field(None, description="Optional new HTTP method")
     parameters: Optional[Dict] = Field(None, description="Optional new API parameters")
-    auth_config: Optional[AuthConfig] = Field(None, description="Optional new authentication configuration")
+    auth_config: Optional[AuthConfig | List[AuthConfig]] = Field(None, description="Optional new authentication configuration")
     icon: Optional[str] = Field(None, description="Icon URL of the tool")
     is_stream: Optional[bool] = Field(None, description="Whether the API returns a stream response")
     output_format: Optional[Dict] = Field(None, description="JSON configuration for formatting API output")
@@ -288,7 +288,7 @@ class ToolModel(BaseModel):
     path: str
     method: str
     parameters: Dict
-    auth_config: Optional[Dict] = None
+    auth_config: Optional[Dict | List] = None
     icon: Optional[str] = Field(None, description="Icon URL of the tool")
     is_public: bool = False
     is_official: bool = False
@@ -318,7 +318,7 @@ class CreateOpenAPIToolRequest(BaseModel):
     """Request model for creating OpenAPI tools"""
     name: str = Field(..., description="Base name for the tools")
     api_list: List[dict] = Field(..., description="List of API endpoint information")
-    auth_config: Optional[AuthConfig] = Field(None, description="Authentication configuration")
+    auth_config: Optional[AuthConfig | List[AuthConfig]] = Field(None, description="Authentication configuration")
 
 
 class CreateToolsBatchRequest(BaseModel):

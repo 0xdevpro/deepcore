@@ -38,6 +38,7 @@ async def create_tool(
             user=user,
             session=session
         )
+        await session.commit()
         return RestResponse(data=tool)
     except CustomAgentException as e:
         logger.error(f"Error creating tool: {str(e)}", exc_info=True)
@@ -339,6 +340,7 @@ async def create_tools_batch(
             user=user,
             session=session
         )
+        await session.commit()
         return RestResponse(data=tools)
     except CustomAgentException as e:
         logger.error(f"Error creating tools in batch: {str(e)}", exc_info=True)

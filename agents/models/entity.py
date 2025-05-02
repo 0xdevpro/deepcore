@@ -23,7 +23,7 @@ class ToolInfo(BaseModel):
     is_stream: Optional[bool] = False
     output_format: Optional[Dict] = None
     description: Optional[str] = None
-    auth_config: Optional[Dict] = None
+    auth_config: Optional[Dict | List] = None
     is_public: bool = False
     is_official: bool = False
     tenant_id: Optional[str] = None

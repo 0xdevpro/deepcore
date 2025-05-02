@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import Dict, List, Any, Optional
 
 import mcp.types as types
@@ -11,9 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import Response
 
+from agents.agent.entity.inner.think_output import ThinkOutput
+from agents.agent.llm.llm_factory import LLMFactory
+from agents.agent.prompts.mcp_prompt import generate_prompt
+from agents.agent.tools.message_tool import send_message
 from agents.common.config import SETTINGS
 from agents.exceptions import CustomAgentException, ErrorCode
-from agents.models.models import MCPServer, MCPTool, MCPPrompt, MCPResource, MCPStore, App
+from agents.models.models import MCPServer, MCPTool, MCPPrompt, MCPResource, MCPStore, App, Tool
+from agents.services import tool_service
 from agents.services.tool_service import get_tool, get_tools_by_ids
 from agents.utils.http_client import async_client
 from agents.utils.session import get_async_session_ctx
@@ -75,13 +81,12 @@ async def create_mcp_server_from_tools(
                 tool_id=tool_id
             )
             session.add(mcp_tool)
-        
-        await session.commit()
             
         # No longer need to register handlers or store server instance in memory
         
         return {
             "mcp_name": mcp_name,
+            "mcp_id": mcp_server.id,
             "tool_count": len(tool_ids),
             "tool_ids": tool_ids,
             "url": f"{SETTINGS.API_BASE_URL}/mcp/{mcp_name}",
@@ -1011,6 +1016,7 @@ async def create_mcp_store(
     author: Optional[str] = None,
     github_url: Optional[str] = None,
     is_public: Optional[bool] = False,
+    agent_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Create a new MCP Store
@@ -1051,10 +1057,11 @@ async def create_mcp_store(
             tags=tags,
             content=content,
             author=author,
-            creator_id=user["id"],
+            creator_id=user["user_id"],
             github_url=github_url,
             tenant_id=user["tenant_id"],
-            is_public=is_public
+            is_public=is_public,
+            agent_id=agent_id
         )
         session.add(mcp_store)
         await session.commit()
@@ -1143,14 +1150,16 @@ async def _get_registered_mcp_stores_impl(
         
         if store_type:
             query = query.where(MCPStore.store_type == store_type)
+        if is_public is not None:
+            query = query.where(MCPStore.is_public == is_public)
             
         # Users can view their own stores or public stores
         if user and isinstance(user, dict):
-            user_id = user.get("id")
+            user_id = user.get("tenant_id")
             if user_id:
                 query = query.where(
                     or_(
-                        MCPStore.creator_id == user_id,
+                        MCPStore.tenant_id == user_id,
                         MCPStore.is_public == True
                     )
                 )
@@ -1183,6 +1192,151 @@ async def _get_registered_mcp_stores_impl(
             f"Failed to get registered MCP stores: {str(e)}"
         )
 
+async def _generate_tool_store_content(
+    store: MCPStore,
+    session: AsyncSession,
+    user: Optional[dict] = None
+) -> str:
+    """
+    Generate content for tool type store
+    
+    Args:
+        store: MCP Store instance
+        session: Database session
+        user: Current user information (optional)
+        
+    Returns:
+        Generated markdown content
+    """
+    # Get MCP server associated with this store
+    mcp_server = await session.execute(
+        select(MCPServer).where(MCPServer.id == store.agent_id)
+    )
+    mcp_server = mcp_server.scalar_one_or_none()
+    
+    if not mcp_server:
+        return ""
+        
+    # Get tools associated with this MCP server
+    tools = await session.execute(
+        select(Tool).join(MCPTool).where(
+            MCPTool.mcp_server_id == mcp_server.id
+        )
+    )
+    tools = tools.scalars().all()
+    
+    # Get API Key based on user authentication
+    api_key = "your-api-key"
+    if user:
+        try:
+            from agents.services.open_service import get_or_create_credentials
+            credentials = await get_or_create_credentials(user, session)
+            if credentials and credentials.get("token"):
+                api_key = credentials["token"]
+        except Exception as e:
+            logger.warning(f"Failed to get API Key for user: {str(e)}")
+    
+    # Generate markdown content with tool details
+    content = f"""# DeepCore MCP Tools Guide
+![DeepCore Logo](http://deepcore.top/deepcore.png)
+
+## Introduction
+
+This MCP server provides {len(tools)} tools for various tasks. This guide will explain how to use these tools through the MCP interface.
+
+## Available Tools
+
+"""
+    
+    # Add tool details
+    for tool in tools:
+        content += f"### {tool.name}\n\n"
+        content += f"{tool.description or 'No description available'}\n\n"
+        content += f"Endpoint: {tool.origin}{tool.path}\n"
+        content += f"Method: {tool.method}\n\n"
+        
+        if tool.parameters:
+            content += "#### Parameters\n\n"
+            for param_type in ['query', 'path', 'header']:
+                if tool.parameters.get(param_type):
+                    content += f"##### {param_type.capitalize()} Parameters\n\n"
+                    for param in tool.parameters[param_type]:
+                        content += f"- **{param.get('name')}**: {param.get('description') or 'No description'}"
+                        if param.get('required'):
+                            content += " (Required)"
+                        content += "\n"
+                    content += "\n"
+            
+            if tool.parameters.get('body'):
+                content += "##### Body Parameters\n\n"
+                content += f"```json\n{json.dumps(tool.parameters['body'], indent=2)}\n```\n\n"
+    
+    content += f"""## Quick Start
+
+### 1. Get API Key
+
+Step 1: Log in to the DeepCore Platform
+Visit https://deepcore.top and log in to your account.
+
+Step 2: Get Your API Key
+From your account settings, get your API key.
+
+### 2. Configure MCP Client
+
+Choose the appropriate configuration method based on your MCP client:
+
+#### Claude Desktop
+
+1. Open Claude Desktop Settings
+2. Go to `Developer > Edit Config`
+3. Add the following configuration to `claude_desktop_config.json`:
+
+```json
+{{
+  "mcpServers": {{
+    "deepcore-tools": {{
+      "url": "{SETTINGS.API_BASE_URL}/mcp/{store.name}?api-key={api_key}"
+    }}
+  }}
+}}
+```
+
+#### Cursor
+
+1. Open Cursor Settings
+2. Go to `Preferences > Cursor Settings > MCP`
+3. Click `Add new global MCP Server`
+4. Add the following configuration:
+
+```json
+{{
+  "mcpServers": {{
+    "deepcore-tools": {{
+      "url": "{SETTINGS.API_BASE_URL}/mcp/{store.name}?api-key={api_key}"
+    }}
+  }}
+}}
+```
+
+### 3. Usage Example
+
+After configuration, you can directly use the tools in conversations. For example:
+
+```
+User: Help me use the tool to check the weather
+AI: I'll help you use the weather tool with the appropriate parameters.
+```
+
+## Technical Support
+
+If you encounter any issues during use, you can get support through the following channels:
+
+1. Visit DeepCore Documentation Center: https://docs.deepcore.top
+2. Join DeepCore Community: https://community.deepcore.top
+3. Contact Technical Support: support@deepcore.top"""
+    
+    return content
+
 async def _get_mcp_store_detail_impl(
     store_id: int,
     session: AsyncSession,
@@ -1210,9 +1364,13 @@ async def _get_mcp_store_detail_impl(
         if not store:
             return None
             
-        # If it's an agent store, set the content
+        # Generate content based on store type
         if store.store_type == MCP_STORE_TYPE_AGENT and store.agent_id:
             content = await get_store_content(str(store_id), session, user)
+            if content:
+                store.content = content
+        elif store.store_type == MCP_STORE_TYPE_TOOL:
+            content = await _generate_tool_store_content(store, session, user)
             if content:
                 store.content = content
             
@@ -1394,9 +1552,7 @@ async def get_store_content(store_id: str, session: AsyncSession, user: Optional
             
             # Generate markdown content with agent details
             content = f"""# DeepCore MCP Client Guide
-<p align="center">
-  <img src="http://deepcore.top/deepcore.png" alt="DeepCore Logo" width="200"/>
-</p>
+![DeepCore Logo](http://deepcore.top/deepcore.png)
 
 ## Introduction
 
@@ -1471,3 +1627,126 @@ If you encounter any issues during use, you can get support through the followin
             return content
             
     return store.content
+
+async def generate_tools_from_input(
+    user_input: str,
+    conversation_id: str,
+    user: dict,
+    session: AsyncSession
+):
+    """
+    Generate tool list from user input using LLM
+    
+    Args:
+        user_input: User's input text
+        conversation_id: Conversation ID for context
+        user: Current user information
+        session: Database session
+        
+    Returns:
+        List of tool configurations in flattened API format
+    """
+    try:
+        prompt = generate_prompt(user_input, [])
+        response = (await LLMFactory.get_llm(SETTINGS.MCP_MODEL_NAME, user, session)).astream(prompt)
+        answer = ""
+        async for data in response:
+            if data.additional_kwargs and "reasoning_content" in data.additional_kwargs:
+                yield ThinkOutput().write_text(data.additional_kwargs.get("reasoning_content")).to_stream()
+            answer += data.text()
+        pattern = r"```(\w+)?\n(.*?)```"
+        matches = re.findall(pattern, answer, re.DOTALL)
+        if matches:
+            for language, content in matches:
+                yield send_message("tools", json.loads(content))
+        else:
+            yield send_message("tools", eval(answer))
+    except Exception as e:
+        logger.error(f"Error generating tools from input: {e}", exc_info=True)
+        raise CustomAgentException(
+            ErrorCode.API_CALL_ERROR,
+            f"Failed to generate tools from input: {str(e)}"
+        )
+
+async def create_tools_and_mcp_server(
+    tools: List[dict],
+    mcp_name: str,
+    user: dict,
+    session: AsyncSession,
+    description: Optional[str] = None,
+    icon: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Create multiple tools and an MCP server in one operation with transaction support
+    
+    Args:
+        tools: List of tool configurations
+        mcp_name: Name for the new MCP server
+        user: Current user information
+        session: Database session
+        description: Optional MCP service description
+        icon: Optional icon URL for the MCP store
+        
+    Returns:
+        Dictionary containing created tools, MCP server and store information
+        
+    Raises:
+        CustomAgentException: If any error occurs during the operation
+    """
+    try:
+        # Create tools in batch
+        created_tools = await tool_service.create_tools_batch(
+            tools=tools,
+            user=user,
+            session=session
+        )
+        
+        # Extract tool IDs from created tools
+        tool_ids = [str(tool.id) for tool in created_tools]
+        
+        # Create MCP server with the new tools
+        mcp_server = await create_mcp_server_from_tools(
+            mcp_name=mcp_name,
+            tool_ids=tool_ids,
+            user=user,
+            session=session,
+            description=description
+        )
+
+        from agents.services.open_service import get_or_create_credentials
+        credentials = await get_or_create_credentials(user, session)
+        api_key = ""
+        if credentials and credentials.get("token"):
+            api_key = credentials["token"]
+
+        # Create MCP Store
+        store = await create_mcp_store(
+            store_name=mcp_name,
+            store_type=MCP_STORE_TYPE_TOOL,
+            user=user,
+            session=session,
+            description=description,
+            content="",
+            agent_id=mcp_server.get("mcp_id", None),
+            icon=icon
+        )
+
+        # Commit the transaction
+        await session.commit()
+        return {
+            "tools": created_tools,
+            "mcp_server": mcp_server,
+            "mcp_url": f"{SETTINGS.API_BASE_URL}/mcp/{mcp_name}?api-key={api_key}",
+            "store": store
+        }
+            
+    except CustomAgentException:
+        await session.rollback()
+        raise
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error creating tools and MCP server: {e}", exc_info=True)
+        raise CustomAgentException(
+            ErrorCode.API_CALL_ERROR,
+            f"Failed to create tools and MCP server: {str(e)}"
+        )

@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any, AsyncGenerator, Union
+from typing import Dict, Any, AsyncGenerator, Union, List
 from typing import Optional
 
 import aiohttp
@@ -61,16 +61,31 @@ class AsyncHttpClient:
             return path
         return f"{base_url}/{path.lstrip('/')}"
 
-    def _apply_auth_config(self, url: str, headers: dict, auth_config: Optional[Dict]) -> tuple[str, dict]:
-        """Apply authentication configuration to request"""
+    def _apply_auth_config(self, url: str, headers: dict, auth_config: Optional[Dict | List]) -> tuple[str, dict]:
+        """Apply authentication configuration to request
+        
+        Args:
+            url: Request URL
+            headers: Request headers
+            auth_config: Authentication configuration, can be:
+                - Single dict: {"location": "header"/"param", "key": "key_name", "value": "key_value"}
+                - List of dicts: [{"location": "header", ...}, {"location": "param", ...}]
+                
+        Returns:
+            Tuple of (modified_url, modified_headers)
+        """
         if not auth_config:
             return url, headers
         
-        if auth_config.get('location') == 'header':
-            headers[auth_config['key']] = auth_config['value']
-        elif auth_config.get('location') == 'param':
-            separator = '&' if '?' in url else '?'
-            url = f"{url}{separator}{auth_config['key']}={auth_config['value']}"
+        # Convert single dict to list for uniform processing
+        configs = auth_config if isinstance(auth_config, list) else [auth_config]
+        
+        for config in configs:
+            if config.get('location') == 'header':
+                headers[config['key']] = config['value']
+            elif config.get('location') == 'param':
+                separator = '&' if '?' in url else '?'
+                url = f"{url}{separator}{config['key']}={config['value']}"
         
         return url, headers
 
@@ -87,7 +102,7 @@ class AsyncHttpClient:
         json_data: Optional[Dict] = None,
         data: Optional[Any] = None,
         headers: Optional[Dict[str, str]] = None,
-        auth_config: Optional[Dict] = None,
+        auth_config: Optional[Dict | List] = None,
         stream: bool = False
     ) -> Union[Dict, str, AsyncGenerator[str, None]]:
         """
