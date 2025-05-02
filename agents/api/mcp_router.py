@@ -71,6 +71,7 @@ class CreateToolsAndMCPServerRequest(BaseModel):
     tools: List[dict]
     mcp_name: str
     description: Optional[str] = None
+    icon: Optional[str] = None
 
 
 @router.post("/mcp/create", summary="Create MCP Server")
@@ -488,7 +489,8 @@ async def create_tools_and_mcp_server(
             mcp_name=request.mcp_name,
             user=user,
             session=session,
-            description=request.description
+            description=request.description,
+            icon=request.icon
         )
         return RestResponse(data=result)
     except CustomAgentException as e:

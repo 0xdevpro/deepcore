@@ -1238,9 +1238,7 @@ async def _generate_tool_store_content(
     
     # Generate markdown content with tool details
     content = f"""# DeepCore MCP Tools Guide
-<p align="center">
-  <img src="http://deepcore.top/deepcore.png" alt="DeepCore Logo" width="200"/>
-</p>
+![DeepCore Logo](http://deepcore.top/deepcore.png)
 
 ## Introduction
 
@@ -1554,9 +1552,7 @@ async def get_store_content(store_id: str, session: AsyncSession, user: Optional
             
             # Generate markdown content with agent details
             content = f"""# DeepCore MCP Client Guide
-<p align="center">
-  <img src="http://deepcore.top/deepcore.png" alt="DeepCore Logo" width="200"/>
-</p>
+![DeepCore Logo](http://deepcore.top/deepcore.png)
 
 ## Introduction
 
@@ -1677,7 +1673,8 @@ async def create_tools_and_mcp_server(
     mcp_name: str,
     user: dict,
     session: AsyncSession,
-    description: Optional[str] = None
+    description: Optional[str] = None,
+    icon: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Create multiple tools and an MCP server in one operation with transaction support
@@ -1688,6 +1685,7 @@ async def create_tools_and_mcp_server(
         user: Current user information
         session: Database session
         description: Optional MCP service description
+        icon: Optional icon URL for the MCP store
         
     Returns:
         Dictionary containing created tools, MCP server and store information
@@ -1729,7 +1727,8 @@ async def create_tools_and_mcp_server(
             session=session,
             description=description,
             content="",
-            agent_id=mcp_server.get("mcp_id", None)
+            agent_id=mcp_server.get("mcp_id", None),
+            icon=icon
         )
 
         # Commit the transaction
