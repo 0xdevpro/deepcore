@@ -79,6 +79,8 @@ class Settings(BaseSettings):
     MONGO_STRING: str = ""
     IMGAI_API_KEY: str = ""
     IMGAI_URL: str = ""
+    C_PRO_API_KEY: str = ""
+    CRYPTOCURRENCY_LATEST_URL = ""
 
 
 
