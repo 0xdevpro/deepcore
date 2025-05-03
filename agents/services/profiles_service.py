@@ -2,9 +2,11 @@ from decimal import Decimal
 
 from bson import Decimal128
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agents.models.mongo_db import profiles_col
 from agents.protocol.schemas import ProfileInfo, DepositInfo
+from agents.services import get_or_create_credentials
 
 
 class SpendChangeRequest(BaseModel):
@@ -27,11 +29,11 @@ def spend_balance(request: SpendChangeRequest):
     )
 
 
-def get_profile_info(tenant_id: str) -> ProfileInfo:
+async def get_profile_info(user: dict, session: AsyncSession) -> ProfileInfo:
+    tenant_id = user["tenant_id"]
     ret = ProfileInfo(tenant_id=tenant_id)
 
-    # TODO get apikey
-    ret.api_key = ""
+    ret.api_key = (await get_or_create_credentials(user, session)).get("token", None)
 
     doc = profiles_col.find_one({"tenant_id": tenant_id})
     if doc:
