@@ -50,7 +50,7 @@ async def _aigc_gen_img(task: AigcImgTask):
                 content.append({"type": "image_url", "image_url": {"url": base64_image}})
 
         data = {
-            "model": "gpt-4o-image",
+            "model": "gpt-4o-image-vip",
             "stream": False,
             "messages": [
                 {
