@@ -1,3 +1,4 @@
+from decimal import Decimal
 from enum import StrEnum
 from typing import Optional, List
 
@@ -11,6 +12,7 @@ mongo_db = mongo_client["deepcore"]
 
 aigc_img_tasks_col = mongo_db["aigc_img_tasks"]
 twitter_user_col = mongo_db["twitter_user"]
+wallets_col = mongo_db["wallets"]
 
 
 class TwitterPost(BaseModel):
@@ -76,3 +78,15 @@ class AigcImgTask(BaseModel):
 
 def save_aigc_img_task(task: AigcImgTask):
     aigc_img_tasks_col.replace_one({"task_id": task.task_id}, task.model_dump(), upsert=True)
+
+
+class DeepcoreWallet(BaseModel):
+    tenant_id: str
+    balance: Decimal = Field(default=Decimal("0.0"))
+
+
+class WalletInfo(BaseModel):
+    tenant_id: str
+    balance: Decimal = Field(default=Decimal("0.0"))
+    total_spend: Decimal = Field(default=Decimal("0.0"))
+    total_requests_count: int = Field(default=0)
