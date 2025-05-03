@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     C_PRO_API_KEY: str = ""
     CRYPTOCURRENCY_LATEST_URL = ""
 
+    # Agent balance check switch
+    AGENT_BALANCE_CHECK_ENABLED: bool = False
+
 
 
 SETTINGS = Settings()
