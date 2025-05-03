@@ -12,17 +12,18 @@ from agents.exceptions import CustomAgentException, ErrorCode
 from agents.middleware.auth_middleware import get_optional_current_user
 from agents.models.db import get_db
 from agents.services.data_service import DataService, AnalyzeTokenInfoDto, TransAmountStatisticsDto, ChainEnum, \
-    CommandEnum
+    CommandEnum, get_cryptocurrency_latest
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
 @router.get("/data/xpro/hot", summary="Xpro Hot")
 async def xpro_hot(
-    page: int = Query(1, description="Page number"),
-    page_size: int = Query(10, description="Items per page"),
-    user: Optional[dict] = Depends(get_optional_current_user),
-    session: AsyncSession = Depends(get_db)
+        page: int = Query(1, description="Page number"),
+        page_size: int = Query(10, description="Items per page"),
+        user: Optional[dict] = Depends(get_optional_current_user),
+        session: AsyncSession = Depends(get_db)
 ):
     """
     Get Xpro Hot data
@@ -48,12 +49,13 @@ async def xpro_hot(
             msg=get_error_message(ErrorCode.INTERNAL_ERROR)
         )
 
+
 @router.get("/data/xpro/ca", summary="Xpro Ca")
 async def xpro_ca(
-    page: int = Query(1, description="Page number"),
-    page_size: int = Query(10, description="Items per page"),
-    user: Optional[dict] = Depends(get_optional_current_user),
-    session: AsyncSession = Depends(get_db)
+        page: int = Query(1, description="Page number"),
+        page_size: int = Query(10, description="Items per page"),
+        user: Optional[dict] = Depends(get_optional_current_user),
+        session: AsyncSession = Depends(get_db)
 ):
     """
     Get Xpro Ca data
@@ -79,11 +81,12 @@ async def xpro_ca(
             msg=get_error_message(ErrorCode.INTERNAL_ERROR)
         )
 
+
 @router.post("/agent/stream/analyze_token", summary="Analyze Token")
 async def analyze_token(
-    token_info: AnalyzeTokenInfoDto = Body(..., description="Token information for analysis"),
-    user: Optional[dict] = Depends(get_optional_current_user),
-    session: AsyncSession = Depends(get_db)
+        token_info: AnalyzeTokenInfoDto = Body(..., description="Token information for analysis"),
+        user: Optional[dict] = Depends(get_optional_current_user),
+        session: AsyncSession = Depends(get_db)
 ):
     """
     Analyze token information
@@ -113,12 +116,13 @@ async def analyze_token(
             msg=get_error_message(ErrorCode.INTERNAL_ERROR)
         )
 
+
 @router.get("/crypto/trans/amount/toplow", summary="Get Transaction Amount TopN or LowN")
 async def get_trans_amount_statistics(
-    chain: ChainEnum = Query(..., description="The blockchain chain"),
-    cmd: CommandEnum = Query(..., description="The command to fetch specific statistics"),
-    user: Optional[dict] = Depends(get_optional_current_user),
-    session: AsyncSession = Depends(get_db)
+        chain: ChainEnum = Query(..., description="The blockchain chain"),
+        cmd: CommandEnum = Query(..., description="The command to fetch specific statistics"),
+        user: Optional[dict] = Depends(get_optional_current_user),
+        session: AsyncSession = Depends(get_db)
 ):
     """
     Get transaction amount TopN or LowN statistics
@@ -147,11 +151,12 @@ async def get_trans_amount_statistics(
             msg=get_error_message(ErrorCode.INTERNAL_ERROR)
         )
 
+
 @router.post("/agent/stream/deep-think", summary="Deep Analysis")
 async def deep_think(
-    query: DeepThinkDto = Body(..., description="Query for deep analysis"),
-    user: Optional[dict] = Depends(get_optional_current_user),
-    session: AsyncSession = Depends(get_db)
+        query: DeepThinkDto = Body(..., description="Query for deep analysis"),
+        user: Optional[dict] = Depends(get_optional_current_user),
+        session: AsyncSession = Depends(get_db)
 ):
     """
     Deep analysis with streaming response
@@ -179,4 +184,21 @@ async def deep_think(
         return RestResponse(
             code=ErrorCode.INTERNAL_ERROR,
             msg=get_error_message(ErrorCode.INTERNAL_ERROR)
-        ) 
+        )
+
+
+@router.get("/data/cryptocurrency/latest")
+async def cryptocurrency_latest(
+        id: int,
+):
+    try:
+        result = {}
+        latest = await get_cryptocurrency_latest(id)
+        result.update({'latest': latest})
+        return RestResponse(data=result)
+    except Exception as e:
+        logger.error(f"Unexpected error getting cryptocurrency latest data: {str(e)}", exc_info=True)
+        return RestResponse(
+            code=ErrorCode.INTERNAL_ERROR,
+            msg=get_error_message(ErrorCode.INTERNAL_ERROR)
+        )

@@ -1,7 +1,8 @@
 import logging
 from enum import Enum
-from typing import Dict, Any, AsyncGenerator, List
+from typing import Dict, Any, AsyncGenerator, List, Optional
 
+import aiohttp
 import httpx
 from fastapi import Depends
 from pydantic import BaseModel
@@ -213,4 +214,28 @@ class DataService:
                         yield chunk
             except httpx.RequestError as e:
                 logger.error(f"Request error for deep_think: {str(e)}", exc_info=True)
-                yield f"error: {str(e)}" 
+                yield f"error: {str(e)}"
+
+
+async def get_cryptocurrency_latest(id: int) -> Optional[Any]:
+    headers = {
+        'Accepts': 'application/json',
+        'X-CMC_PRO_API_KEY': SETTINGS.C_PRO_API_KEY,
+    }
+
+    params = {
+        'id': id,
+        'convert': "USD"
+    }
+
+    logger.info(f"Calling {SETTINGS.CRYPTOCURRENCY_LATEST_URL} with params: {params}")
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(SETTINGS.CRYPTOCURRENCY_LATEST_URL, headers=headers, params=params) as response:
+                response.raise_for_status()
+                return await response.json()
+    except Exception as e:
+        logging.error(e)
+
+    return None
