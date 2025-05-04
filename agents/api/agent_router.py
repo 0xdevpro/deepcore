@@ -377,7 +377,6 @@ async def dialogue_get(
 @router.post("/agents/{agent_id}/publish", summary="Publish Agent")
 async def publish_agent(
         agent_id: str,
-        is_public: bool = Query(True, description="Set agent as public"),
         create_fee: float = Query(0.0, description="Fee for creating the agent (tips for creator)"),
         price: float = Query(0.0, description="Fee for using the agent"),
         enable_mcp: bool = Query(False, description="Whether to enable MCP for this agent"),
@@ -395,7 +394,7 @@ async def publish_agent(
     - **enable_mcp**: Whether to enable MCP for this agent
     """
     try:
-        await agent_service.publish_agent(agent_id, is_public, create_fee, price, enable_mcp, user, session)
+        await agent_service.publish_agent(agent_id, False, create_fee, price, enable_mcp, user, session)
         return RestResponse(data="ok")
     except CustomAgentException as e:
         logger.error(f"Error publishing agent: {str(e)}", exc_info=True)

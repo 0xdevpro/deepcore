@@ -4,6 +4,7 @@ import re
 import uuid
 from datetime import datetime
 from typing import Union
+from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -13,11 +14,12 @@ from agents.common.redis_utils import redis_utils
 from agents.exceptions import CustomAgentException, ErrorCode
 from agents.models.models import User
 from agents.protocol.schemas import LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, NonceResponse, \
-    WalletLoginRequest, WalletLoginResponse, TokenResponse, ChainType
+    WalletLoginRequest, WalletLoginResponse, TokenResponse, ChainType, DepositInfo
 from agents.utils.jwt_utils import (
     generate_token_pair, verify_refresh_token, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
 )
 from agents.utils.web3_utils import generate_nonce, get_message_to_sign, verify_signature
+from agents.services.profiles_service import deposit
 
 logger = logging.getLogger(__name__)
 
@@ -296,6 +298,7 @@ async def get_or_create_wallet_user(wallet_address: str, session: AsyncSession, 
         session.add(user)
         await session.commit()
         await session.refresh(user)
+        await deposit(tenant_id, DepositInfo.give(Decimal("0.01")))
     elif user.chain_type != chain_type_str:
         # Update chain_type if it has changed
         user.chain_type = chain_type_str
