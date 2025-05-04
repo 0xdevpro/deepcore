@@ -7,14 +7,17 @@ from agents.common.response import RestResponse
 from agents.middleware.auth_middleware import get_current_user
 from agents.models.db import get_db
 from agents.protocol.schemas import DepositRequest, ProfileInfo
-from agents.services.profiles_service import get_profile_info, get_agent_usage_stats
+from agents.services.profiles_service import get_profile_info, get_agent_usage_stats, bg_check_tx
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 @router.post("/profile/deposit")
-async def deposit(tx_info: DepositRequest, background_tasks: BackgroundTasks):
+async def deposit(tx_info: DepositRequest,
+                  background_tasks: BackgroundTasks,
+                  user: dict = Depends(get_current_user)):
+    background_tasks.add_task(bg_check_tx, user, tx_info)
     return RestResponse()
 
 

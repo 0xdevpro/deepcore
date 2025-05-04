@@ -1,3 +1,5 @@
+import datetime
+import logging
 from decimal import Decimal
 
 from bson import Decimal128
@@ -5,9 +7,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agents.models.mongo_db import profiles_col, agent_usage_stats_col, agent_usage_logs_col
-from agents.protocol.schemas import ProfileInfo, DepositInfo
+from agents.protocol.schemas import ProfileInfo, DepositInfo, DepositRequest
 from agents.services import get_or_create_credentials
-import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class SpendChangeRequest(BaseModel):
@@ -106,5 +109,12 @@ async def deposit(tenant_id: str, deposit_info: DepositInfo):
         {
             "$push": {"deposit_history": data},
             "$inc": {"balance": data.get("amount")}
-        }
+        },
+        upsert=True
     )
+
+
+async def bg_check_tx(user: dict, deposit_request: DepositRequest):
+    # TODO scan check tx status
+    logger.info(f"tx req {deposit_request.model_dump()} user {user}")
+    pass
