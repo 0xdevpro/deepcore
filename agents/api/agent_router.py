@@ -388,7 +388,6 @@ async def publish_agent(
 
     Parameters:
     - **agent_id**: ID of the agent to publish
-    - **is_public**: Whether to make the agent public
     - **create_fee**: Fee for creating the agent (tips for creator)
     - **price**: Fee for using the agent
     - **enable_mcp**: Whether to enable MCP for this agent
