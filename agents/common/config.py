@@ -85,6 +85,8 @@ class Settings(BaseSettings):
     # Agent balance check switch
     AGENT_BALANCE_CHECK_ENABLED: bool = False
 
+    MASTER_ADDRESS: str = ""
+
 
 
 SETTINGS = Settings()

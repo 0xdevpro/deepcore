@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from agents.models.mongo_db import profiles_col, agent_usage_stats_col, agent_usage_logs_col
 from agents.protocol.schemas import ProfileInfo, DepositInfo, DepositRequest
 from agents.services import get_or_create_credentials
+from agents.common.config import SETTINGS
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,9 @@ async def get_profile_info(user: dict, session: AsyncSession) -> ProfileInfo:
     ret = ProfileInfo(tenant_id=tenant_id)
 
     ret.api_key = (await get_or_create_credentials(user, session)).get("token", None)
+    ret.wallet_address = user.get("wallet_address", "")
+    # Set master_address from config
+    ret.master_address = SETTINGS.MASTER_ADDRESS
 
     doc = profiles_col.find_one({"tenant_id": tenant_id})
     if doc:
@@ -48,6 +52,9 @@ async def get_profile_info(user: dict, session: AsyncSession) -> ProfileInfo:
         deposit_history = doc.get("deposit_history", [])
         for deposit in deposit_history:
             if isinstance(deposit, dict):
+                # Convert amount from Decimal128 to Decimal if needed
+                if isinstance(deposit.get("amount"), Decimal128):
+                    deposit["amount"] = deposit["amount"].to_decimal()
                 ret.deposit_history.append(DepositInfo(**deposit))
     return ret
 
@@ -98,6 +105,10 @@ def get_agent_usage_stats(user_id: str):
     Returns a list of usage stats for all agents used by this user.
     """
     stats = list(agent_usage_stats_col.find({"user_id": user_id}))
+    # Convert ObjectId to str
+    for stat in stats:
+        if "_id" in stat:
+            stat["_id"] = str(stat["_id"])
     return stats
 
 
