@@ -46,3 +46,15 @@ async def get_profile_info(user: dict, session: AsyncSession) -> ProfileInfo:
             if isinstance(deposit, dict):
                 ret.deposit_history.append(DepositInfo(**deposit))
     return ret
+
+
+async def deposit(tenant_id: str, deposit_info: DepositInfo):
+    data = deposit_info.model_dump()
+    data.update({"amount": Decimal128(str(data.get("amount", Decimal("0.0"))))})
+    profiles_col.update_one(
+        {"tenant_id": tenant_id},
+        {
+            "$push": {"deposit_history": data},
+            "$inc": {"balance": data.get("amount")}
+        }
+    )

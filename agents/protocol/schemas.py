@@ -1,3 +1,4 @@
+import time
 import uuid
 from datetime import datetime
 from decimal import Decimal
@@ -444,17 +445,24 @@ class PublishAgentToStoreRequest(BaseModel):
 
 
 class DepositRequest(BaseModel):
-    wallet_type: str
-    tx_hash: str
-    amount: str
-    from_wallet: str
-    to_wallet: str
+    wallet_type: str = ""
+    tx_hash: str = ""
+    amount: Decimal
+    from_wallet: str = ""
+    to_wallet: str = ""
 
 
 class DepositInfo(DepositRequest):
-    status: str
-    transaction_date: str
+    status: str = ""
+    transaction_ts: int = int(time.time())
 
+    @staticmethod
+    def give(amout: Decimal):
+        return DepositInfo(
+            amount=amout,
+            wallet_type="give",
+            status="give"
+        )
 
 class ProfileInfo(BaseModel):
     tenant_id: str
