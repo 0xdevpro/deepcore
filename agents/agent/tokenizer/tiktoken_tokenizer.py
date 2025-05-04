@@ -24,28 +24,18 @@ class TikToken:
         return self.encoding.decode(tokens)
 
     def count_tokens(self, string: str) -> int:
-        num_tokens = 0
-
+        """
+        Count the number of tokens in the input string using multithreading (thread-safe).
+        """
         def count_tokens_in_chunk(chunk):
-            nonlocal num_tokens
-            num_tokens += len(self.encoding.encode(chunk))
+            return len(self.encoding.encode(chunk))
 
         # Split the string into chunks for parallel processing
         chunks = [
             string[i: i + 1000] for i in range(0, len(string), 1000)
         ]
 
-        # Create a ThreadPoolExecutor with maximum threads
-        with concurrent.futures.ThreadPoolExecutor(
-                max_workers=10
-        ) as executor:
-            # Submit each chunk for processing
-            futures = [
-                executor.submit(count_tokens_in_chunk, chunk)
-                for chunk in chunks
-            ]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            results = list(executor.map(count_tokens_in_chunk, chunks))
 
-            # Wait for all futures to complete
-            concurrent.futures.wait(futures)
-
-        return num_tokens
+        return sum(results)
