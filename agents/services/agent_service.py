@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from agents.agent.chat_agent import ChatAgent
 from agents.agent.memory.agent_context_manager import agent_context_manager
-from agents.agent.tools.message_tool import send_markdown
+from agents.agent.tools.message_tool import send_markdown, send_message
 from agents.common.config import SETTINGS
 from agents.common.encryption_utils import encryption_utils
 from agents.common.json_encoder import UniversalEncoder, universal_decoder
@@ -70,10 +70,13 @@ async def dialogue(
             balance = get_balance(user)
             price = Decimal(str(agent.price))
             if balance < price:
-                yield send_markdown("Insufficient balance, please recharge before using this agent.")
+                yield send_message(
+                    "insufficient_balance",
+                    {"message": "Insufficient balance, please recharge before using this agent."}
+                )
                 return
         except Exception as e:
-            logger.error(f"Balance check failed: {e}")
+            logger.error(f"Balance check failed: {e}", exc_info=True)
             yield send_markdown("Balance check failed, please try again later.")
             return
 
