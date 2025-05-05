@@ -123,7 +123,7 @@ class AIImageService:
             balance = get_balance(user)
             if balance < Decimal(str(price)):
                 raise CustomAgentException(
-                    error_code=ErrorCode.PERMISSION_DENIED,
+                    error_code=ErrorCode.INSUFFICIENT_BALANCE,
                     message="Insufficient balance, please recharge before using the AI image service."
                 )
         # Validate fields based on mode

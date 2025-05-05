@@ -100,7 +100,7 @@ async def create_mcp_server(
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error creating MCP server: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error creating MCP server: {str(e)}", exc_info=True)
         return RestResponse(
@@ -145,7 +145,7 @@ async def add_prompt_template(
         return RestResponse(data={"success": True})
     except CustomAgentException as e:
         logger.error(f"Error adding prompt template: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error adding prompt template: {str(e)}", exc_info=True)
         return RestResponse(
@@ -188,7 +188,7 @@ async def add_resource(
         return RestResponse(data={"success": True})
     except CustomAgentException as e:
         logger.error(f"Error adding resource: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error adding resource: {str(e)}", exc_info=True)
         return RestResponse(
@@ -210,7 +210,7 @@ async def list_mcp_servers(
         return RestResponse(data=servers)
     except CustomAgentException as e:
         logger.error(f"Error listing MCP servers: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error listing MCP servers: {str(e)}", exc_info=True)
         return RestResponse(
@@ -241,7 +241,7 @@ async def delete_mcp_server(
         return RestResponse(data={"success": True})
     except CustomAgentException as e:
         logger.error(f"Error deleting MCP server: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error deleting MCP server: {str(e)}", exc_info=True)
         return RestResponse(
@@ -278,7 +278,7 @@ async def get_tool_mcp_info(
         })
     except CustomAgentException as e:
         logger.error(f"Error getting tool MCP info: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error getting tool MCP info: {str(e)}", exc_info=True)
         return RestResponse(
@@ -320,7 +320,7 @@ async def create_mcp_store(
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error creating MCP store: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error creating MCP store: {str(e)}", exc_info=True)
         return RestResponse(
@@ -362,7 +362,7 @@ async def list_mcp_stores(
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error listing MCP stores: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error listing MCP stores: {str(e)}", exc_info=True)
         return RestResponse(
@@ -393,7 +393,7 @@ async def get_mcp_store(
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error getting MCP store detail: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error getting MCP store detail: {str(e)}", exc_info=True)
         return RestResponse(
@@ -424,7 +424,7 @@ async def delete_mcp_store(
         return RestResponse(data={"success": True})
     except CustomAgentException as e:
         logger.error(f"Error deleting MCP store: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error deleting MCP store: {str(e)}", exc_info=True)
         return RestResponse(
@@ -460,7 +460,7 @@ async def generate_tools(
         return StreamingResponse(content=result, media_type="text/event-stream")
     except CustomAgentException as e:
         logger.error(f"Error generating tools: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error generating tools: {str(e)}", exc_info=True)
         return RestResponse(
@@ -495,7 +495,7 @@ async def create_tools_and_mcp_server(
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error creating tools and MCP server: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error creating tools and MCP server: {str(e)}", exc_info=True)
         return RestResponse(

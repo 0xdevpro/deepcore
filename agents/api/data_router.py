@@ -41,7 +41,7 @@ async def xpro_hot(
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error getting xpro hot data: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error getting xpro hot data: {str(e)}", exc_info=True)
         return RestResponse(
@@ -73,7 +73,7 @@ async def xpro_ca(
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error getting xpro ca data: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error getting xpro ca data: {str(e)}", exc_info=True)
         return RestResponse(
@@ -108,7 +108,7 @@ async def analyze_token(
         )
     except CustomAgentException as e:
         logger.error(f"Error analyzing token: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error analyzing token: {str(e)}", exc_info=True)
         return RestResponse(
@@ -143,7 +143,7 @@ async def get_trans_amount_statistics(
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error fetching transaction statistics: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error fetching transaction statistics: {str(e)}", exc_info=True)
         return RestResponse(
@@ -178,7 +178,7 @@ async def deep_think(
         )
     except CustomAgentException as e:
         logger.error(f"Error performing deep analysis: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error in deep analysis: {str(e)}", exc_info=True)
         return RestResponse(

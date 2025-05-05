@@ -113,7 +113,7 @@ async def wallet_login(
         result = await auth_service.wallet_login(request, session)
         return RestResponse(data=result)
     except CustomAgentException as e:
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Error in wallet login: {e}", exc_info=True)
         return RestResponse(
