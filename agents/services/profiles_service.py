@@ -150,12 +150,12 @@ async def bg_check_tx(user: dict, deposit_request: DepositRequest):
             log_messages = tx.value.transaction.meta.log_messages or []
             if (
                     len(account_keys) != 4
-                    or account_keys[0] != deposit_request.from_wallet
-                    or account_keys[1] != deposit_request.to_wallet
+                    or str(account_keys[0]) != deposit_request.from_wallet
+                    or str(account_keys[1]) != deposit_request.to_wallet
                     # sol program
-                    or account_keys[2] != "11111111111111111111111111111111"
+                    or str(account_keys[2]) != "11111111111111111111111111111111"
                     # solana trans program
-                    or account_keys[3] != "ComputeBudget111111111111111111111111111111"
+                    or str(account_keys[3]) != "ComputeBudget111111111111111111111111111111"
             ):
                 logger.error(f"BAD tx account !!! {account_keys}")
                 break
@@ -171,6 +171,7 @@ async def bg_check_tx(user: dict, deposit_request: DepositRequest):
                 eposit_info = DepositInfo(**deposit_request.model_dump())
                 eposit_info.status = "PAID"
                 await deposit(user["tenant_id"], eposit_info)
+                return
 
         except Exception as e:
             logger.info(f"tx req {deposit_request.model_dump()} error {e}")
