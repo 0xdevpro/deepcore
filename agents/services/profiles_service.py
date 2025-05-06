@@ -139,6 +139,10 @@ async def deposit(tenant_id: str, deposit_info: DepositInfo):
 
 async def bg_check_tx(user: dict, deposit_request: DepositRequest):
     logger.info(f"tx req {deposit_request.model_dump()} user {user}")
+    if SETTINGS.MASTER_ADDRESS != deposit_request.to_wallet:
+        logger.error(f"BAD master address {deposit_request.to_wallet}")
+        return
+
     for i in range(300):
         try:
             tx = solana_get_transaction(deposit_request.tx_hash)
