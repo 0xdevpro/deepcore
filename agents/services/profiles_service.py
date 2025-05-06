@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import logging
 from decimal import Decimal
@@ -6,10 +7,11 @@ from bson import Decimal128
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agents.common.config import SETTINGS
+from agents.common.solana_client import solana_get_transaction
 from agents.models.mongo_db import profiles_col, agent_usage_stats_col, agent_usage_logs_col
 from agents.protocol.schemas import ProfileInfo, DepositInfo, DepositRequest
 from agents.services import get_or_create_credentials
-from agents.common.config import SETTINGS
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +54,11 @@ async def get_profile_info(user: dict, session: AsyncSession) -> ProfileInfo:
         deposit_history = doc.get("deposit_history", [])
         for deposit in deposit_history:
             if isinstance(deposit, dict):
-                # Convert amount from Decimal128 to Decimal if needed
-                if isinstance(deposit.get("amount"), Decimal128):
-                    deposit["amount"] = deposit["amount"].to_decimal()
-                ret.deposit_history.append(DepositInfo(**deposit))
+                if deposit.get("tx_hash", None):
+                    # Convert amount from Decimal128 to Decimal if needed
+                    if isinstance(deposit.get("amount"), Decimal128):
+                        deposit["amount"] = deposit["amount"].to_decimal()
+                    ret.deposit_history.append(DepositInfo(**deposit))
     return ret
 
 
@@ -113,6 +116,15 @@ def get_agent_usage_stats(user_id: str):
 
 
 async def deposit(tenant_id: str, deposit_info: DepositInfo):
+    if deposit_info.tx_hash and len(deposit_info.tx_hash) > 6:
+        pre = profiles_col.find_one({"tenant_id": tenant_id})
+        pre_deposit_history = pre.get("deposit_history", [])
+        for item in pre_deposit_history:
+            if isinstance(item, dict):
+                if deposit_info.tx_hash == item.get("tx_hash", ""):
+                    logger.error(f"BAD tx hash repeat!!! {deposit_info.tx_hash}")
+                    return
+
     data = deposit_info.model_dump()
     data.update({"amount": Decimal128(str(data.get("amount", Decimal("0.0"))))})
     profiles_col.update_one(
@@ -126,6 +138,37 @@ async def deposit(tenant_id: str, deposit_info: DepositInfo):
 
 
 async def bg_check_tx(user: dict, deposit_request: DepositRequest):
-    # TODO scan check tx status
     logger.info(f"tx req {deposit_request.model_dump()} user {user}")
-    pass
+    for i in range(300):
+        try:
+            tx = solana_get_transaction(deposit_request.tx_hash)
+            account_keys = tx.value.transaction.transaction.message.account_keys or None
+            log_messages = tx.value.transaction.meta.log_messages or []
+            if (
+                    len(account_keys) != 4
+                    or account_keys[0] != deposit_request.from_wallet
+                    or account_keys[1] != deposit_request.to_wallet
+                    # sol program
+                    or account_keys[2] != "11111111111111111111111111111111"
+                    # solana trans program
+                    or account_keys[3] != "ComputeBudget111111111111111111111111111111"
+            ):
+                logger.error(f"BAD tx account !!! {account_keys}")
+                break
+            min_expected = int(Decimal(deposit_request.amount) * Decimal(1_000_000_000))
+            delta = tx.value.transaction.meta.post_balances[1] - tx.value.transaction.meta.pre_balances[1]
+            if delta < min_expected:
+                logger.error(f"BAD tx amount !!! delta:{delta} min_expected:{min_expected}")
+                break
+            if (
+                    not tx.value.transaction.meta.err
+                    and "Program 11111111111111111111111111111111 success" in log_messages
+            ):
+                eposit_info = DepositInfo(**deposit_request.model_dump())
+                eposit_info.status = "PAID"
+                await deposit(user["tenant_id"], eposit_info)
+
+        except Exception as e:
+            logger.info(f"tx req {deposit_request.model_dump()} error {e}")
+        finally:
+            await asyncio.sleep(2)

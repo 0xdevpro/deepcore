@@ -144,6 +144,7 @@ pynacl = "^1.5.0"
 mcp = "^1.4.1"
 mirascope = "^1.22.0"
 langchain-xai = "^0.2.3"
+solana = "^0.36.6"
 
 
 [build-system]

@@ -86,6 +86,7 @@ class Settings(BaseSettings):
     AGENT_BALANCE_CHECK_ENABLED: bool = False
 
     MASTER_ADDRESS: str = ""
+    SOLANA_RPC_URL: str = ""
 
 
 
