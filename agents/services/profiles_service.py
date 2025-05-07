@@ -52,13 +52,18 @@ async def get_profile_info(user: dict, session: AsyncSession) -> ProfileInfo:
         ret.total_requests_count = doc.get("total_requests_count", 0)
 
         deposit_history = doc.get("deposit_history", [])
-        for deposit in deposit_history:
-            if isinstance(deposit, dict):
-                if deposit.get("tx_hash", None):
+        deposit_history = sorted(
+            deposit_history,
+            key=lambda x: x.get("transaction_ts", 0),
+            reverse=True
+        )
+        for item in deposit_history:
+            if isinstance(item, dict):
+                if item.get("tx_hash", None):
                     # Convert amount from Decimal128 to Decimal if needed
-                    if isinstance(deposit.get("amount"), Decimal128):
-                        deposit["amount"] = deposit["amount"].to_decimal()
-                    ret.deposit_history.append(DepositInfo(**deposit))
+                    if isinstance(item.get("amount"), Decimal128):
+                        item["amount"] = item["amount"].to_decimal()
+                    ret.deposit_history.append(DepositInfo(**item))
     return ret
 
 
@@ -143,7 +148,7 @@ async def bg_check_tx(user: dict, deposit_request: DepositRequest):
         logger.error(f"BAD master address {deposit_request.to_wallet}")
         return
 
-    for i in range(300):
+    for i in range(60 * 10):
         try:
             tx = solana_get_transaction(deposit_request.tx_hash)
             account_keys = tx.value.transaction.transaction.message.account_keys or None
@@ -176,4 +181,9 @@ async def bg_check_tx(user: dict, deposit_request: DepositRequest):
         except Exception as e:
             logger.info(f"tx req {deposit_request.model_dump()} error {e}")
         finally:
-            await asyncio.sleep(2)
+            await asyncio.sleep(1)
+
+    eposit_info = DepositInfo(**deposit_request.model_dump())
+    eposit_info.status = "FAIL"
+    eposit_info.amount = Decimal("0.0")
+    await deposit(user["tenant_id"], eposit_info)
