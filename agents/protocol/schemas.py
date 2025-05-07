@@ -454,7 +454,7 @@ class DepositRequest(BaseModel):
 
 class DepositInfo(DepositRequest):
     status: str = ""
-    transaction_ts: int = int(time.time())
+    transaction_ts: int = Field(default_factory=lambda: int(time.time()))
 
     @staticmethod
     def give(amout: Decimal):
@@ -463,6 +463,7 @@ class DepositInfo(DepositRequest):
             wallet_type="give",
             status="give"
         )
+
 
 class ProfileInfo(BaseModel):
     tenant_id: str
