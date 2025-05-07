@@ -28,7 +28,21 @@ async def info(user: dict = Depends(get_current_user),
     return RestResponse(data=data)
 
 
-@router.get("/profile/agent_usage_stats")
-async def agent_usage_stats(user: dict = Depends(get_current_user)):
-    stats = get_agent_usage_stats(user["user_id"])
+@router.get(
+    "/profile/agent_usage_stats",
+    summary="Get agent usage statistics with pagination",
+    description="Get all agent usage statistics for the current user with pagination. Returns total, page, page_size, and items. 'page' is the page number (starting from 1), 'page_size' is the number of items per page."
+)
+async def agent_usage_stats(
+    user: dict = Depends(get_current_user),
+    page: int = 1,  # Page number, starting from 1
+    page_size: int = 10  # Number of items per page, default 10, max 100
+):
+    """
+    Get all agent usage statistics for the current user with pagination.
+    - **page**: Page number, starting from 1
+    - **page_size**: Number of items per page, default 10, max 100
+    The response contains total, page, page_size, and items.
+    """
+    stats = get_agent_usage_stats(user["user_id"], page, page_size)
     return RestResponse(data=stats)

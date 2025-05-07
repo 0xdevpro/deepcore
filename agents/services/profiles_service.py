@@ -107,17 +107,24 @@ def record_agent_usage(agent_id: str, user: dict, price: float, query: str, resp
     agent_usage_logs_col.insert_one(log_doc)
 
 
-def get_agent_usage_stats(user_id: str):
+def get_agent_usage_stats(user_id: str, page: int = 1, page_size: int = 10):
     """
-    Query agent usage statistics for a given user_id.
-    Returns a list of usage stats for all agents used by this user.
+    Query agent usage statistics for a given user_id, with pagination.
+    Returns a dict with total, page, page_size, items.
     """
-    stats = list(agent_usage_stats_col.find({"user_id": user_id}))
-    # Convert ObjectId to str
+    skip = (page - 1) * page_size
+    cursor = agent_usage_stats_col.find({"user_id": user_id}).skip(skip).limit(page_size)
+    stats = list(cursor)
+    total = agent_usage_stats_col.count_documents({"user_id": user_id})
     for stat in stats:
         if "_id" in stat:
             stat["_id"] = str(stat["_id"])
-    return stats
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "items": stats
+    }
 
 
 async def deposit(tenant_id: str, deposit_info: DepositInfo):
