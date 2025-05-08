@@ -42,7 +42,7 @@ async def create_tool(
         return RestResponse(data=tool)
     except CustomAgentException as e:
         logger.error(f"Error creating tool: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error creating tool: {str(e)}", exc_info=True)
         return RestResponse(
@@ -84,7 +84,7 @@ async def list_tools(
         return RestResponse(data=tools)
     except CustomAgentException as e:
         logger.error(f"Error listing tools: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error listing tools: {str(e)}", exc_info=True)
         return RestResponse(
@@ -108,7 +108,7 @@ async def get_tool(
         return RestResponse(data=await tool_service.get_tool(tool_id, user, session))
     except CustomAgentException as e:
         logger.error(f"Error getting tool details: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error getting tool details: {str(e)}", exc_info=True)
         return RestResponse(
@@ -157,7 +157,7 @@ async def update_tool(
         return RestResponse(data=tool)
     except CustomAgentException as e:
         logger.error(f"Error updating tool: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error updating tool: {str(e)}", exc_info=True)
         return RestResponse(
@@ -182,7 +182,7 @@ async def delete_tool(
         return RestResponse(data="ok")
     except CustomAgentException as e:
         logger.error(f"Error deleting tool: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error deleting tool: {str(e)}", exc_info=True)
         return RestResponse(
@@ -206,7 +206,7 @@ async def publish_tool(
         return RestResponse(data="ok")
     except CustomAgentException as e:
         logger.error(f"Error publishing tool: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error publishing tool: {str(e)}", exc_info=True)
         return RestResponse(
@@ -234,7 +234,7 @@ async def assign_tools(
         return RestResponse(data="ok")
     except CustomAgentException as e:
         logger.error(f"Error assigning tools to agent: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error assigning tools to agent: {str(e)}", exc_info=True)
         return RestResponse(
@@ -261,7 +261,7 @@ async def remove_tools(
         return RestResponse(data="ok")
     except CustomAgentException as e:
         logger.error(f"Error removing tools from agent: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error removing tools from agent: {str(e)}", exc_info=True)
         return RestResponse(
@@ -288,7 +288,7 @@ async def get_agent_tools(
         return RestResponse(data=tools)
     except CustomAgentException as e:
         logger.error(f"Error getting agent tools: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error getting agent tools: {str(e)}", exc_info=True)
         return RestResponse(
@@ -476,7 +476,7 @@ async def debug_tool(
                 return RestResponse(data=response)
     except CustomAgentException as e:
         logger.error(f"Error debugging tool: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error debugging tool: {str(e)}", exc_info=True)
         return RestResponse(

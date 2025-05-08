@@ -79,6 +79,14 @@ class Settings(BaseSettings):
     MONGO_STRING: str = ""
     IMGAI_API_KEY: str = ""
     IMGAI_URL: str = ""
+    C_PRO_API_KEY: str = ""
+    CRYPTOCURRENCY_LATEST_URL = ""
+
+    # Agent balance check switch
+    AGENT_BALANCE_CHECK_ENABLED: bool = False
+
+    MASTER_ADDRESS: str = ""
+    SOLANA_RPC_URL: str = ""
 
 
 

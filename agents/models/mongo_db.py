@@ -11,6 +11,11 @@ mongo_db = mongo_client["deepcore"]
 
 aigc_img_tasks_col = mongo_db["aigc_img_tasks"]
 twitter_user_col = mongo_db["twitter_user"]
+profiles_col = mongo_db["profiles"]
+
+# Add agent usage statistics and logs collections
+agent_usage_stats_col = mongo_db["agent_usage_stats"]
+agent_usage_logs_col = mongo_db["agent_usage_logs"]
 
 
 class TwitterPost(BaseModel):

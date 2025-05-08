@@ -46,7 +46,7 @@ async def get_api_credentials(
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error getting open platform credentials: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error getting open platform credentials: {str(e)}", exc_info=True)
         return RestResponse(
@@ -287,7 +287,7 @@ async def get_api_token(
         })
     except CustomAgentException as e:
         logger.error(f"Error generating open platform token: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error generating open platform token: {str(e)}", exc_info=True)
         return RestResponse(
@@ -320,7 +320,7 @@ async def reset_api_token(
         return RestResponse(data=token_data)
     except CustomAgentException as e:
         logger.error(f"Error resetting open platform token: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error resetting open platform token: {str(e)}", exc_info=True)
         return RestResponse(

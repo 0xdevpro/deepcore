@@ -17,6 +17,9 @@ class ErrorCode(IntEnum):
     REFRESH_TOKEN_INVALID = 10105
     UNAUTHORIZED = 10106
 
+    # insufficient_balance
+    INSUFFICIENT_BALANCE = 10150
+
     # Permission related errors (10200-10299)
     PERMISSION_DENIED = 10200
     TENANT_INVALID = 10201

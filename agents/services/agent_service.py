@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from agents.agent.chat_agent import ChatAgent
 from agents.agent.memory.agent_context_manager import agent_context_manager
-from agents.agent.tools.message_tool import send_markdown
+from agents.agent.tools.message_tool import send_markdown, send_message
 from agents.common.config import SETTINGS
 from agents.common.encryption_utils import encryption_utils
 from agents.common.json_encoder import UniversalEncoder, universal_decoder
@@ -23,7 +23,8 @@ from agents.models.models import App, Tool, AgentTool
 from agents.protocol.schemas import AgentStatus, DialogueRequest, AgentDTO, ToolInfo, CategoryDTO, ModelDTO
 from agents.services import mcp_service
 from agents.services.model_service import get_model_with_key
-from agents.services.vip_service import VipService
+from agents.services.profiles_service import get_balance, SpendChangeRequest, spend_balance, record_agent_usage
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -59,21 +60,25 @@ async def dialogue(
             "Agent not found or no permission"
         )
     
-    # Check VIP level access
-    if agent.vip_level > 0:  # If agent requires VIP access
-        if not user:
-            raise CustomAgentException(
-                ErrorCode.UNAUTHORIZED,
-                "Please login to access this agent"
-            )
-        user_vip_level = await VipService.get_user_vip_level(user["id"], session)
-        if user_vip_level.value < agent.vip_level:
-            yield send_markdown("VIP membership required to access this agent")
-            return
-    
     if agent.is_paused:
         yield send_markdown(agent.pause_message)
         return
+
+    # Balance check before agent usage
+    if user and SETTINGS.AGENT_BALANCE_CHECK_ENABLED and getattr(agent, "price", None):
+        try:
+            balance = get_balance(user)
+            price = Decimal(str(agent.price))
+            if balance < price:
+                yield send_message(
+                    "insufficient_balance",
+                    {"message": "Insufficient balance, please recharge before using this agent."}
+                )
+                return
+        except Exception as e:
+            logger.error(f"Balance check failed: {e}", exc_info=True)
+            yield send_markdown("Balance check failed, please try again later.")
+            return
 
     # Get the initialization flag
     chat_context = ChatContext(
@@ -90,11 +95,35 @@ async def dialogue(
         chat_context.temp_data = context_data
             
     # Create appropriate agent based on mode
-    agent = ChatAgent(agent_info, chat_context)
+    resp = ChatAgent(agent_info, chat_context)
     
     # Stream the response
-    async for response in agent.stream(request.query, request.conversation_id):
+    last_response = None
+    async for response in resp.stream(request.query, request.conversation_id):
+        last_response = response
         yield response
+
+    # Spend balance and log usage after agent usage
+    if user and getattr(agent, "price", None):
+        try:
+            price = Decimal(str(agent.price))
+            # Use spend_balance to deduct balance
+            spend_balance(SpendChangeRequest(
+                tenant_id=user["tenant_id"],
+                amount=price,
+                requests_count=1
+            ))
+            # Use record_agent_usage to update stats and log
+            record_agent_usage(
+                agent_id=agent_id,
+                user=user,
+                price=float(price),
+                query=getattr(request, "query", None),
+                response=last_response,
+                agent_name=getattr(agent, "name", None)
+            )
+        except Exception as e:
+            logger.error(f"Spend balance or log usage failed: {e}")
 
 
 async def get_agent(id: str, user: Optional[dict], session: AsyncSession, is_full_config=False):

@@ -50,11 +50,11 @@ async def create_ai_image_task(
             )
 
         ai_image_service = AIImageService(session)
-        await ai_image_service.create_ai_image_task(task_info, tenant_id, background_tasks)
+        await ai_image_service.create_ai_image_task(task_info, tenant_id, background_tasks, user)
         return RestResponse(data=True)
     except CustomAgentException as e:
         logger.error(f"Error creating AI image task: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error creating AI image task: {str(e)}", exc_info=True)
         return RestResponse(
@@ -98,7 +98,7 @@ async def query_ai_image_task_list(
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error querying AI image task list: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error querying AI image task list: {str(e)}", exc_info=True)
         return RestResponse(
@@ -135,7 +135,7 @@ async def query_template_list(
         return RestResponse(data=result)
     except CustomAgentException as e:
         logger.error(f"Error querying template list: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error querying template list: {str(e)}", exc_info=True)
         return RestResponse(

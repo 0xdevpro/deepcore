@@ -123,7 +123,7 @@ async def list_personal_agents(
         return RestResponse(data=agents)
     except CustomAgentException as e:
         logger.error(f"Error listing personal agents: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error listing personal agents: {str(e)}", exc_info=True)
         return RestResponse(
@@ -169,7 +169,7 @@ async def list_public_agents(
         return RestResponse(data=agents)
     except CustomAgentException as e:
         logger.error(f"Error listing public agents: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error listing public agents: {str(e)}", exc_info=True)
         return RestResponse(
@@ -200,7 +200,7 @@ async def get_agent(
         return RestResponse(data=agents)
     except CustomAgentException as e:
         logger.error(f"Error getting agent details: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error getting agent details: {str(e)}", exc_info=True)
         return RestResponse(
@@ -263,7 +263,7 @@ async def delete_agent(
         return RestResponse(data="ok")
     except CustomAgentException as e:
         logger.error(f"Error deleting agent: {str(e)}", exc_info=True)
-        return RestResponse(code=e.error_code, msg=str(e))
+        return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error deleting agent: {str(e)}", exc_info=True)
         return RestResponse(
@@ -377,7 +377,6 @@ async def dialogue_get(
 @router.post("/agents/{agent_id}/publish", summary="Publish Agent")
 async def publish_agent(
         agent_id: str,
-        is_public: bool = Query(True, description="Set agent as public"),
         create_fee: float = Query(0.0, description="Fee for creating the agent (tips for creator)"),
         price: float = Query(0.0, description="Fee for using the agent"),
         enable_mcp: bool = Query(False, description="Whether to enable MCP for this agent"),
@@ -389,13 +388,12 @@ async def publish_agent(
 
     Parameters:
     - **agent_id**: ID of the agent to publish
-    - **is_public**: Whether to make the agent public
     - **create_fee**: Fee for creating the agent (tips for creator)
     - **price**: Fee for using the agent
     - **enable_mcp**: Whether to enable MCP for this agent
     """
     try:
-        await agent_service.publish_agent(agent_id, is_public, create_fee, price, enable_mcp, user, session)
+        await agent_service.publish_agent(agent_id, False, create_fee, price, enable_mcp, user, session)
         return RestResponse(data="ok")
     except CustomAgentException as e:
         logger.error(f"Error publishing agent: {str(e)}", exc_info=True)

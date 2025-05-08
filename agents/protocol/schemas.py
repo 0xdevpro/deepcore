@@ -1,5 +1,7 @@
+import time
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
 from typing import List, Optional, Dict, Union, Any
 
@@ -146,7 +148,8 @@ class AgentDTO(BaseModel):
     price: Optional[float] = Field(None, description="Price for the agent")
     mcp_url: Optional[str] = Field(None, description="MCP url for the agent")
     vip_level: Optional[int] = Field(0, description="VIP level required to access this agent")
-    shouldInitializeDialog: Optional[bool] = Field(False, description="Whether to initialize dialog when creating the agent")
+    shouldInitializeDialog: Optional[bool] = Field(False,
+                                                   description="Whether to initialize dialog when creating the agent")
     initializeDialogQuestion: Optional[str] = Field(None, description="Question to send when initializing dialog")
     dev: Optional[str] = Field(None, description="Developer wallet address")
     tenant_id: Optional[str] = None
@@ -189,7 +192,8 @@ class ToolUpdate(BaseModel):
     path: Optional[str] = Field(None, description="Optional new API path")
     method: Optional[str] = Field(None, description="Optional new HTTP method")
     parameters: Optional[Dict] = Field(None, description="Optional new API parameters")
-    auth_config: Optional[AuthConfig | List[AuthConfig]] = Field(None, description="Optional new authentication configuration")
+    auth_config: Optional[AuthConfig | List[AuthConfig]] = Field(None,
+                                                                 description="Optional new authentication configuration")
     icon: Optional[str] = Field(None, description="Icon URL of the tool")
     is_stream: Optional[bool] = Field(None, description="Whether the API returns a stream response")
     output_format: Optional[Dict] = Field(None, description="JSON configuration for formatting API output")
@@ -438,3 +442,35 @@ class PublishAgentToStoreRequest(BaseModel):
     icon: Optional[str] = None
     tags: Optional[List[str]] = None
     github_url: Optional[str] = None
+
+
+class DepositRequest(BaseModel):
+    wallet_type: str = ""
+    tx_hash: str = ""
+    amount: Decimal
+    from_wallet: str = ""
+    to_wallet: str = ""
+
+
+class DepositInfo(DepositRequest):
+    status: str = ""
+    transaction_ts: int = Field(default_factory=lambda: int(time.time()))
+
+    @staticmethod
+    def give(amout: Decimal):
+        return DepositInfo(
+            amount=amout,
+            wallet_type="give",
+            status="give"
+        )
+
+
+class ProfileInfo(BaseModel):
+    tenant_id: str
+    api_key: str = ""
+    deposit_history: List[DepositInfo] = []
+    balance: Decimal = Field(default=Decimal("0.0"))
+    total_spend: Decimal = Field(default=Decimal("0.0"))
+    total_requests_count: int = Field(default=0)
+    wallet_address: str = Field(default="", description="User wallet address")
+    master_address: str = Field(default="", description="Master wallet address for transactions")

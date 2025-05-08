@@ -17,6 +17,8 @@ from agents.models.models import AIImageTemplate
 from agents.models.mongo_db import AigcImgTask, aigc_img_tasks_col
 from agents.services.aigc_image_service import backgroud_run_aigc_img_task
 from agents.services.twitter_service import get_twitter_user_by_username
+from agents.services.profiles_service import get_balance, SpendChangeRequest, spend_balance, record_agent_usage
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -103,14 +105,27 @@ class AIImageService:
     async def create_ai_image_task(self,
                                    task_req: CreateAIImageTaskDTO,
                                    tenant_id: str,
-                                   background_tasks: BackgroundTasks) -> Dict[str, Any]:
+                                   background_tasks: BackgroundTasks,
+                                   user: dict = None) -> Dict[str, Any]:
         """
         Create a new AI image task
         
         :param task_req: Task information including template_id and mode-specific fields
         :param tenant_id: Tenant ID from user information
+        :param user: User info dict (required for balance check)
         :return: API response data
         """
+        # Balance check and deduction
+        agent_id = "ai_image_agent"
+        agent_name = "AI Image Generator"
+        price = 0.002
+        if user and SETTINGS.AGENT_BALANCE_CHECK_ENABLED:
+            balance = get_balance(user)
+            if balance < Decimal(str(price)):
+                raise CustomAgentException(
+                    error_code=ErrorCode.INSUFFICIENT_BALANCE,
+                    message="Insufficient balance, please recharge before using the AI image service."
+                )
         # Validate fields based on mode
         task_req.validate_fields()
 
@@ -157,6 +172,22 @@ class AIImageService:
             task.base64_image_list = base64_img_list
 
         background_tasks.add_task(backgroud_run_aigc_img_task, task)
+
+        # Deduct balance and record usage after task creation
+        if user:
+            spend_balance(SpendChangeRequest(
+                tenant_id=user["tenant_id"],
+                amount=Decimal(str(price)),
+                requests_count=1
+            ))
+            record_agent_usage(
+                agent_id=agent_id,
+                user=user,
+                price=price,
+                query=json.dumps(task_req.dict(), ensure_ascii=False),
+                response="AI image task created",
+                agent_name=agent_name
+            )
 
     async def query_ai_image_task_list(self, query_params: AIImageTaskQueryDTO, tenant_id: str) -> Dict[str, Any]:
         """
