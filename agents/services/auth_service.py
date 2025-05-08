@@ -172,6 +172,7 @@ async def get_wallet_nonce(wallet_address: str, session: AsyncSession) -> NonceR
             tenant_id=tenant_id
         )
         session.add(user)
+        await deposit(tenant_id, DepositInfo.give(Decimal("0.01")))
         await session.commit()
 
     return {
