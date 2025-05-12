@@ -15,6 +15,7 @@
   <a href="#quick-start">Quick Start</a> •
   <a href="#use-cases">Use Cases</a> •
   <a href="#future-plans">Future Plans</a>
+  • <a href="README-zh.md">中文文档</a>
 </p>
 
 ## Features
