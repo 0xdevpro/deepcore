@@ -564,7 +564,7 @@ async def comprehensive_pro_token_analysis(token_query: str):
             logger.warning(f"Failed to get X posts for token: {str(e)}")
 
 
-        yield CustomOutput({"type": "tokenin_out", "text": token_address})
+        # yield CustomOutput({"type": "tokenin_out", "text": token_address})
 
     except Exception as e:
         logger.error(f"Pro token analysis failed: {str(e)}")
