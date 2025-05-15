@@ -35,7 +35,8 @@ class AuthConfig:
         r"^/api/open/agents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/dialogue$",
         r"^/api/mcp/.*$",
         r"^/mcp/.*$",
-        r"^/api/tools/.*$"
+        r"^/api/tools/.*$",
+        r"^/a2a/.*$",
     ]
 
 class AuthResponse:
