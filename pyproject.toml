@@ -145,6 +145,7 @@ mcp = "^1.4.1"
 mirascope = "^1.22.0"
 langchain-xai = "^0.2.3"
 solana = "^0.36.6"
+python-a2a = "^0.5.5"
 
 
 [build-system]
