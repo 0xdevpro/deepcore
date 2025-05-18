@@ -818,7 +818,7 @@ async def a2a_tasks_stream(
 # Include nested router with agent_id parameter
 base_router.include_router(
     a2a_router,
-    prefix="/a2a/{agent_id}",
+    prefix="/A2A/{agent_id}",
 )
 
 # Expose the base_router as the main app
