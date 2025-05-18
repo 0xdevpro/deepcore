@@ -1260,3 +1260,27 @@ asyncio.run(main())
             f"Failed to list a2a agents: {str(e)}"
         )
 
+async def multi_dialogue(
+        query: str,
+        conversation_id: str,
+        user: Optional[dict] = None,
+        session: AsyncSession = None
+) -> AsyncIterator[str]:
+    """
+    Handle dialogue with multiple agents and return a combined stream of responses.
+    
+    This is currently a placeholder implementation that will be expanded in the future
+    to support actual multi-agent conversations.
+    
+    Args:
+        query: User's query
+        conversation_id: Conversation ID
+        user: Optional user information
+        session: Database session
+        
+    Returns:
+        AsyncIterator[str]: Streaming response from multiple agents
+    """
+    yield send_markdown("hello")
+
+
