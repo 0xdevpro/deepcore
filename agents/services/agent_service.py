@@ -20,11 +20,12 @@ from agents.exceptions import CustomAgentException, ErrorCode
 from agents.models.db import get_db
 from agents.models.entity import AgentInfo, ModelInfo, ChatContext
 from agents.models.models import App, Tool, AgentTool
-from agents.protocol.schemas import AgentStatus, DialogueRequest, AgentDTO, ToolInfo, CategoryDTO, ModelDTO
+from agents.protocol.schemas import AgentStatus, DialogueRequest, AgentDTO, ToolInfo, CategoryDTO, ModelDTO, A2AAgentDTO
 from agents.services import mcp_service
 from agents.services.model_service import get_model_with_key
 from agents.services.profiles_service import get_balance, SpendChangeRequest, spend_balance, record_agent_usage
 from decimal import Decimal
+from agents.services.open_service import get_or_create_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -974,6 +975,17 @@ async def _convert_to_agent_dto(agent: App, user: Optional[dict], is_full_config
         enable_mcp=agent.enable_mcp if hasattr(agent, 'enable_mcp') else False,
     )
     
+    # Get API key for MCP URL if user is provided
+    mcp_url = None
+    if agent.enable_mcp and user and user.get("tenant_id"):
+        try:
+            credentials = await get_or_create_credentials(user, session)
+            if credentials and credentials.get("token"):
+                mcp_url = f"{SETTINGS.API_BASE_URL}/mcp/assistant/{agent.id}?api-key={credentials['token']}"
+        except Exception as e:
+            logger.warning(f"Failed to generate MCP URL for agent {agent.id}: {e}")
+    agent_dto.mcp_url = mcp_url
+    
     # Add tools to the DTO
     if agent.tools:
         agent_dto.tools = []
@@ -1135,4 +1147,140 @@ async def publish_to_store(
             ErrorCode.API_CALL_ERROR,
             f"Failed to publish agent to store: {str(e)}"
         )
+
+async def list_a2a_agents(
+        status: Optional[AgentStatus],
+        skip: int,
+        limit: int,
+        session: AsyncSession,
+        user: Optional[dict] = None
+):
+    """
+    List a2a agents with pagination.
+
+    Args:
+        status: Optional filter for agent status
+        skip: Number of records to skip ((page - 1) * page_size)
+        limit: Number of records per page (page_size)
+        session: Database session
+        user: Optional user information for token decryption
+
+    Returns:
+        dict: {
+            "items": list of a2a agents,
+            "total": total number of records,
+            "page": current page number,
+            "page_size": number of items per page,
+            "total_pages": total number of pages
+        }
+    """
+    try:
+        # Calculate current page from skip and limit
+        page = (skip // limit) + 1
+
+        conditions = [App.is_public == True]
+
+        # Calculate total count for pagination info
+        count_query = select(func.count()).select_from(App).where(and_(*conditions))
+        total_count = await session.execute(count_query)
+        total_count = total_count.scalar()
+
+        # Get paginated results with ordering
+        query = (
+            select(App)
+            .where(and_(*conditions))
+        )
+
+        result = await session.execute(
+            query.offset(skip).limit(limit)
+        )
+        agents = result.scalars().all()
+        
+        # Convert to A2AAgentDTO list
+        a2a_agents = []
+        for agent in agents:
+            if user and user.get("tenant_id"):
+                try:
+                    credentials = await get_or_create_credentials(user, session)
+                    if credentials and credentials.get("token"):
+                        a2a_url = f"{SETTINGS.API_BASE_URL}/A2A/{agent.id}"
+                        a2a_example = f"""\
+// pip install python-a2a
+
+import asyncio
+from python_a2a import StreamingClient, Message, TextContent, MessageRole
+
+async def main():
+    client = StreamingClient(
+        "{a2a_url}",
+        headers={{"X-API-Token": "{credentials['token']}"}}
+    )
+    try:
+        async for chunk in client.stream_response(Message(
+        content=TextContent(text="Tell me about A2A streaming"),
+        role=MessageRole.USER
+    )):
+            print(chunk['content'])
+    except Exception as e:
+        print(f"Streaming error: {{e}}")
+
+asyncio.run(main())
+"""
+                        # Create A2AAgentDTO
+                        a2a_agent = A2AAgentDTO(
+                            id=agent.id,
+                            name=agent.name,
+                            description=agent.description,
+                            icon=agent.icon,
+                            a2a_url=a2a_url,
+                            a2a_example=a2a_example,
+                            suggested_questions=agent.suggested_questions,
+                            status=agent.status,
+                            create_time=agent.create_time,
+                            update_time=agent.update_time
+                        )
+                        a2a_agents.append(a2a_agent)
+                except Exception as e:
+                    logger.warning(f"Failed to generate A2A URL for agent {agent.id}: {e}")
+        
+        # Return paginated result
+        return {
+            "items": a2a_agents,
+            "total": total_count,
+            "page": page,
+            "page_size": limit,
+            "total_pages": (total_count + limit - 1) // limit
+        }
+    except CustomAgentException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing a2a agents: {e}", exc_info=True)
+        raise CustomAgentException(
+            ErrorCode.INTERNAL_ERROR,
+            f"Failed to list a2a agents: {str(e)}"
+        )
+
+async def multi_dialogue(
+        query: str,
+        conversation_id: str,
+        user: Optional[dict] = None,
+        session: AsyncSession = None
+) -> AsyncIterator[str]:
+    """
+    Handle dialogue with multiple agents and return a combined stream of responses.
+    
+    This is currently a placeholder implementation that will be expanded in the future
+    to support actual multi-agent conversations.
+    
+    Args:
+        query: User's query
+        conversation_id: Conversation ID
+        user: Optional user information
+        session: Database session
+        
+    Returns:
+        AsyncIterator[str]: Streaming response from multiple agents
+    """
+    yield send_markdown("hello")
+
 

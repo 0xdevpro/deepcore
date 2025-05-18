@@ -9,7 +9,7 @@ from starlette.types import ASGIApp
 
 from agents.agent.mcp import mcp_sse
 from agents.api import agent_router, api_router, file_router, tool_router, prompt_router, model_router, image_router, \
-    category_router, open_router
+    category_router, open_router, a2a_http_router
 from agents.api.ai_image_router import router as ai_image_router
 from agents.api.api_router import register_startup_events
 from agents.api.auth_router import router as auth_router
@@ -113,6 +113,7 @@ def create_app() -> FastAPI:
     app.include_router(ai_image_router, prefix="/api", tags=["ai_image"])
     app.include_router(vip_router, prefix="/api", tags=["vip"])
     app.include_router(profiles_router, prefix="/api", tags=["profiles"])
+    app.include_router(a2a_http_router.base_router, tags=["A2A"])
 
     # add mcp
     app.mount("/", mcp_sse.get_application())

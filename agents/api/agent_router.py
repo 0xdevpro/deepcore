@@ -1,5 +1,7 @@
 import logging
 import uuid
+import json
+import asyncio
 from typing import Optional, Dict, Any
 
 from fastapi import APIRouter, Depends, Query, Request, Body
@@ -17,7 +19,7 @@ from agents.middleware.auth_middleware import get_current_user, get_optional_cur
 from agents.models.db import get_db
 from agents.protocol.schemas import AgentDTO, DialogueRequest, AgentStatus, \
     PaginationParams, AgentMode, TelegramBotRequest, AgentSettingRequest, AgentContextStoreRequest, \
-    PublishAgentToStoreRequest
+    PublishAgentToStoreRequest, A2AAgentDTO
 from agents.services import agent_service, get_or_create_credentials
 
 router = APIRouter()
@@ -592,6 +594,82 @@ async def publish_agent_to_store(
         return RestResponse(code=e.error_code, msg=e.message)
     except Exception as e:
         logger.error(f"Unexpected error publishing agent to store: {str(e)}", exc_info=True)
+        return RestResponse(
+            code=ErrorCode.INTERNAL_ERROR,
+            msg=get_error_message(ErrorCode.INTERNAL_ERROR)
+        )
+
+@router.get("/agents/a2a", summary="List A2A Agents")
+async def list_a2a_agents(
+        status: Optional[AgentStatus] = Query(None, description="Filter agents by status"),
+        pagination: PaginationParams = Depends(),
+        user: Optional[dict] = Depends(get_optional_current_user),
+        session: AsyncSession = Depends(get_db)
+):
+    """
+    Retrieve a list of a2a agents with pagination.
+
+    - **status**: Filter agents by their status (active, inactive, or draft)
+    - **page**: Page number (starts from 1)
+    - **page_size**: Number of items per page (1-100)
+    
+    Returns a list of A2A-enabled agents with their connection URLs and example code.
+    """
+    try:
+        # Calculate offset from page number
+        offset = (pagination.page - 1) * pagination.page_size
+
+        agents = await agent_service.list_a2a_agents(
+            status=status,
+            skip=offset,
+            limit=pagination.page_size,
+            user=user,
+            session=session
+        )
+        return RestResponse(data=agents)
+    except CustomAgentException as e:
+        logger.error(f"Error listing a2a agents: {str(e)}", exc_info=True)
+        return RestResponse(code=e.error_code, msg=e.message)
+    except Exception as e:
+        logger.error(f"Unexpected error listing a2a agents: {str(e)}", exc_info=True)
+        return RestResponse(
+            code=ErrorCode.INTERNAL_ERROR,
+            msg=get_error_message(ErrorCode.INTERNAL_ERROR)
+        )
+
+@router.get("/agents/multi-dialogue")
+async def multi_dialogue_get(
+        request: Request,
+        query: str = Query(..., description="Query message from the user"),
+        conversation_id: Optional[str] = Query(
+            default=None,
+            alias="conversationId",
+            description="ID of the conversation"
+        ),
+        user: Optional[dict] = Depends(get_optional_current_user),
+        session: AsyncSession = Depends(get_db)
+):
+    """
+    Handle a dialogue between a user and multiple agents using GET method.
+
+    - **query**: Query message from the user
+    - **conversation_id**: ID of the conversation (optional, auto-generated if not provided)
+    """
+    try:
+        # Create a new conversation_id if not provided
+        if not conversation_id:
+            conversation_id = str(uuid.uuid4())
+            
+        # Call the multi_dialogue service function
+        resp = agent_service.multi_dialogue(query, conversation_id, user, session)
+        
+        # Return streaming response
+        return StreamingResponse(content=resp, media_type="text/event-stream")
+    except CustomAgentException as e:
+        logger.error(f"Error in multi-agent dialogue: {str(e)}", exc_info=True)
+        return RestResponse(code=e.error_code, msg=e.message)
+    except Exception as e:
+        logger.error(f"Unexpected error in multi-agent dialogue: {str(e)}", exc_info=True)
         return RestResponse(
             code=ErrorCode.INTERNAL_ERROR,
             msg=get_error_message(ErrorCode.INTERNAL_ERROR)

@@ -35,7 +35,8 @@ class AuthConfig:
         r"^/api/open/agents/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/dialogue$",
         r"^/api/mcp/.*$",
         r"^/mcp/.*$",
-        r"^/api/tools/.*$"
+        r"^/api/tools/.*$",
+        r"^/A2A/.*$",
     ]
 
 class AuthResponse:
@@ -136,12 +137,11 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
                     ):
                         logger.warning(f"Invalid signature for access_key: {access_key}")
                         return False
-
-                    request.state.user = {
-                        "id": credentials.user_id,
-                        "type": "api_key",
-                        "access_key": access_key
-                    }
+                    user_info = await open_service.verify_token_and_get_credentials(credentials.token, session)
+                    if not user_info:
+                        return False
+                    user_info["type"] = "api_key"
+                    request.state.user = user_info
                     return True
             except Exception as e:
                 logger.error(f"Database operation failed: {str(e)}", exc_info=True)
