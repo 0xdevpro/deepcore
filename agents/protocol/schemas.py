@@ -474,3 +474,23 @@ class ProfileInfo(BaseModel):
     total_requests_count: int = Field(default=0)
     wallet_address: str = Field(default="", description="User wallet address")
     master_address: str = Field(default="", description="Master wallet address for transactions")
+
+
+class A2AAgentDTO(BaseModel):
+    """DTO for A2A agents with essential information"""
+    id: str = Field(..., description="ID of the agent")
+    name: str = Field(..., description="Name of the agent")
+    description: str = Field(..., description="Description of the agent")
+    icon: Optional[str] = Field(None, description="Icon URL of the agent")
+    a2a_url: str = Field(..., description="A2A url for the agent")
+    a2a_example: str = Field(..., description="Example code for using A2A with this agent")
+    suggested_questions: Optional[List[str]] = Field(
+        default_factory=list,
+        description="List of suggested questions for users to ask"
+    )
+    status: AgentStatus = Field(default=AgentStatus.ACTIVE, description="Status can be active, inactive, or draft")
+    create_time: Optional[datetime] = Field(None, description="Creation time")
+    update_time: Optional[datetime] = Field(None, description="Last update time")
+    
+    class Config:
+        from_attributes = True
