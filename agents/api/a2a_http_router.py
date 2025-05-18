@@ -393,6 +393,7 @@ async def handle_a2a_request(
                 return JSONResponse(response.to_dict())
 
     except Exception as e:
+        logger.error(f"handle_a2a_request {e}", exc_info=True)
         # Determine response format based on request
         is_google_format = False
         if 'data' in locals():
