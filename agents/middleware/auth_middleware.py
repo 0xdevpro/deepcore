@@ -36,7 +36,7 @@ class AuthConfig:
         r"^/api/mcp/.*$",
         r"^/mcp/.*$",
         r"^/api/tools/.*$",
-        r"^/a2a/.*$",
+        r"^/A2A/.*$",
     ]
 
 class AuthResponse:
