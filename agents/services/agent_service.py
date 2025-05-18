@@ -1203,7 +1203,7 @@ async def list_a2a_agents(
                 try:
                     credentials = await get_or_create_credentials(user, session)
                     if credentials and credentials.get("token"):
-                        a2a_url = f"{SETTINGS.API_BASE_URL}/a2a/{agent.id}"
+                        a2a_url = f"{SETTINGS.API_BASE_URL}/A2A/{agent.id}"
                         a2a_example = f"""\
 // pip install python-a2a
 
