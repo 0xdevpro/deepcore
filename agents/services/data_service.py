@@ -14,12 +14,18 @@ from agents.models.db import get_db
 
 logger = logging.getLogger(__name__)
 
+
+class ViewSignalsReq(BaseModel):
+    ciphertext: str
+
+
 class AnalyzeTokenInfoDto(BaseModel):
     """
     Data transfer object for token analysis request
     """
     chain: str  # Platform of the token, must be 'sol' or 'eth'
-    ca: str     # Token contract address
+    ca: str  # Token contract address
+
 
 class ChainEnum(str, Enum):
     SOLANA = "SOLANA"
@@ -27,6 +33,7 @@ class ChainEnum(str, Enum):
     ETH = "ETH"
     SUI = "SUI"
     BSC = "BSC"
+
 
 class CommandEnum(str, Enum):
     TOP100_15M = "top100_15m"
@@ -44,6 +51,7 @@ class CommandEnum(str, Enum):
     LOW100_12H = "low100_12h"
     LOW100_24H = "low100_24h"
 
+
 class TransAmountStatisticsDto(BaseModel):
     """
     Data transfer object for transaction amount statistics request
@@ -51,11 +59,13 @@ class TransAmountStatisticsDto(BaseModel):
     chain: ChainEnum
     cmd: CommandEnum
 
+
 class DeepThinkDto(BaseModel):
     """
     Data transfer object for deep analysis request
     """
     q: str  # Query string for deep analysis
+
 
 class DataService:
     def __init__(self, session: AsyncSession = Depends(get_db)):
@@ -76,12 +86,12 @@ class DataService:
             "Content-Type": "application/json",
             "x-api-key": self.api_key
         }
-        
+
         params = {
             "page": page,
             "page_size": page_size
         }
-        
+
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(url, headers=headers, params=params, timeout=httpx.Timeout(30.0))
@@ -90,7 +100,7 @@ class DataService:
             except httpx.RequestError as e:
                 logger.error(f"Request error for xpro_hot: {str(e)}", exc_info=True)
                 raise Exception(f"Failed to fetch xpro_hot data: {str(e)}")
-    
+
     async def get_xpro_ca(self, page: int = 1, page_size: int = 10) -> Dict[str, Any]:
         """
         Get Xpro Ca data
@@ -103,12 +113,12 @@ class DataService:
             "Content-Type": "application/json",
             "x-api-key": self.api_key
         }
-        
+
         params = {
             "page": page,
             "page_size": page_size
         }
-        
+
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(url, headers=headers, params=params, timeout=httpx.Timeout(30.0))
@@ -117,7 +127,7 @@ class DataService:
             except httpx.RequestError as e:
                 logger.error(f"Request error for xpro_ca: {str(e)}", exc_info=True)
                 raise Exception(f"Failed to fetch xpro_ca data: {str(e)}")
-                
+
     async def analyze_token(self, token_info: AnalyzeTokenInfoDto) -> AsyncGenerator[str, None]:
         """
         Analyze token information with streaming response
@@ -130,17 +140,17 @@ class DataService:
             "Content-Type": "application/json",
             "x-api-key": self.api_key
         }
-        
+
         payload = token_info.dict()
-        
+
         async with httpx.AsyncClient() as client:
             try:
                 async with client.stream(
-                    "POST",
-                    url, 
-                    headers=headers, 
-                    json=payload, 
-                    timeout=httpx.Timeout(60.0)  # Longer timeout for analysis
+                        "POST",
+                        url,
+                        headers=headers,
+                        json=payload,
+                        timeout=httpx.Timeout(60.0)  # Longer timeout for analysis
                 ) as response:
                     response.raise_for_status()
                     async for chunk in response.aiter_text():
@@ -161,18 +171,18 @@ class DataService:
             "Content-Type": "application/json",
             "x-api-key": self.api_key
         }
-        
+
         # Convert Enum values to strings
         query_params = {
             "chain": params.chain.value,
             "cmd": params.cmd.value
         }
-        
+
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
-                    url, 
-                    headers=headers, 
+                    url,
+                    headers=headers,
                     params=query_params,
                     timeout=httpx.Timeout(30.0)
                 )
@@ -184,7 +194,7 @@ class DataService:
                     error_code=ErrorCode.API_CALL_ERROR,
                     message=f"Failed to fetch transaction statistics: {str(e)}"
                 )
-                
+
     async def deep_think(self, params: DeepThinkDto) -> AsyncGenerator[str, None]:
         """
         Deep analysis with streaming response
@@ -197,17 +207,17 @@ class DataService:
             "Content-Type": "application/json",
             "x-api-key": self.api_key
         }
-        
+
         payload = {"q": params.q}
-        
+
         async with httpx.AsyncClient() as client:
             try:
                 async with client.stream(
-                    "POST",
-                    url, 
-                    headers=headers, 
-                    json=payload, 
-                    timeout=httpx.Timeout(120.0)  # Longer timeout for deep analysis
+                        "POST",
+                        url,
+                        headers=headers,
+                        json=payload,
+                        timeout=httpx.Timeout(120.0)  # Longer timeout for deep analysis
                 ) as response:
                     response.raise_for_status()
                     async for chunk in response.aiter_text():
@@ -215,6 +225,32 @@ class DataService:
             except httpx.RequestError as e:
                 logger.error(f"Request error for deep_think: {str(e)}", exc_info=True)
                 yield f"error: {str(e)}"
+
+    async def view_signals(self, params: ViewSignalsReq) -> Dict[str, Any]:
+        url = f"{self.api_base}/papi/look"
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": self.api_key
+        }
+
+        payload = {"text": params.ciphertext}
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=httpx.Timeout(300.0)
+                )
+                response.raise_for_status()
+                return response.json()
+            except httpx.RequestError as e:
+                logger.error(f"Request error for view signals: {str(e)}", exc_info=True)
+                raise CustomAgentException(
+                    error_code=ErrorCode.API_CALL_ERROR,
+                    message=f"Failed to fetch signals: {str(e)}"
+                )
 
 
 async def get_cryptocurrency_latest(id: int) -> Optional[Any]:
