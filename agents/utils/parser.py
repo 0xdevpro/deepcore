@@ -36,20 +36,31 @@ def extract_md_code(markdown_text: str, language: str = None):
     # Get all code blocks with detected languages
     code_blocks = extract_md_code_blocks(markdown_text)
 
-    # Filter by language if specified
-    if language:
-        code_blocks = [
-            block["content"]
-            for block in code_blocks
-            if block["language"] == language
-        ]
+    # If there are code blocks, extract their content first
+    if code_blocks:
+        # Filter by language if specified
+        if language:
+            code_blocks = [
+                block["content"]
+                for block in code_blocks
+                if block["language"] == language
+            ]
+        else:
+            code_blocks = [
+                block["content"] for block in code_blocks
+            ]  # Include all blocks
+        # Return concatenated content
+        return "\n\n".join(code_blocks) if code_blocks else ""
     else:
-        code_blocks = [
-            block["content"] for block in code_blocks
-        ]  # Include all blocks
-
-    # Return concatenated content
-    return "\n\n".join(code_blocks) if code_blocks else ""
+        # If there are no code blocks, try to extract the first valid JSON object using regex
+        text = markdown_text.strip() if markdown_text else ""
+        # Match the first content that starts with { and ends with }, supports multiline
+        match = re.search(r'\{[\s\S]*\}', text)
+        if match:
+            return match.group(0)
+        else:
+            # If nothing is matched, return the original content
+            return text
 
 
 def func_to_str(function: dict[str, Any]) -> str:
