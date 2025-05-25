@@ -90,7 +90,7 @@ class AgentExecutor(ABC):
 
         # Helper to build history string and count tokens
         def build_history(memories):
-            history = ''
+            history = '\n'
             for index, memory in enumerate(memories):
                 input_hint = ''
                 if hasattr(memory, 'temp_data') and memory.temp_data and "wallet_signature" not in memory.temp_data:
@@ -126,6 +126,6 @@ class AgentExecutor(ABC):
 
         # Step 4: Add to short memory
         self.short_memory.add(
-            role="History Question\n",
+            role="History Question",
             content=history,
         )

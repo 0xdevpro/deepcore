@@ -26,6 +26,7 @@ from agents.services.model_service import get_model_with_key
 from agents.services.profiles_service import get_balance, SpendChangeRequest, spend_balance, record_agent_usage
 from decimal import Decimal
 from agents.services.open_service import get_or_create_credentials
+from agents.agent.multi_agent import MultiAgent
 
 logger = logging.getLogger(__name__)
 
@@ -1267,20 +1268,19 @@ async def multi_dialogue(
         session: AsyncSession = None
 ) -> AsyncIterator[str]:
     """
-    Handle dialogue with multiple agents and return a combined stream of responses.
-    
-    This is currently a placeholder implementation that will be expanded in the future
-    to support actual multi-agent conversations.
-    
+    Handle dialogue with multiple agents and return a collaborative stream of responses.
+    Uses MultiAgent for agent selection and collaboration.
     Args:
         query: User's query
         conversation_id: Conversation ID
         user: Optional user information
         session: Database session
-        
     Returns:
         AsyncIterator[str]: Streaming response from multiple agents
     """
-    yield send_markdown("hello")
+    agent_ids = SETTINGS.MULTI_AGENT_IDS
+    multi_agent = MultiAgent(agent_ids, user, session, conversation_id)
+    async for result in multi_agent.collab_stream(query):
+        yield result
 
 

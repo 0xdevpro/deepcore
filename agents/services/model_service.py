@@ -220,7 +220,7 @@ async def get_model_with_key(
         model = result.scalar_one_or_none()
         
         if not model:
-            return None
+            return None, None
 
         model_dto = ModelDTO(
             id=model.id,

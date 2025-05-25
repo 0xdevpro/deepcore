@@ -88,6 +88,8 @@ class Settings(BaseSettings):
     MASTER_ADDRESS: str = ""
     SOLANA_RPC_URL: str = ""
 
+    MULTI_AGENT_IDS: list[str] = []
+
 
 
 SETTINGS = Settings()

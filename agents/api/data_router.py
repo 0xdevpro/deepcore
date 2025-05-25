@@ -12,7 +12,7 @@ from agents.exceptions import CustomAgentException, ErrorCode
 from agents.middleware.auth_middleware import get_optional_current_user
 from agents.models.db import get_db
 from agents.services.data_service import DataService, AnalyzeTokenInfoDto, TransAmountStatisticsDto, ChainEnum, \
-    CommandEnum, get_cryptocurrency_latest
+    CommandEnum, get_cryptocurrency_latest, ViewSignalsReq
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -198,6 +198,27 @@ async def cryptocurrency_latest(
         return RestResponse(data=result)
     except Exception as e:
         logger.error(f"Unexpected error getting cryptocurrency latest data: {str(e)}", exc_info=True)
+        return RestResponse(
+            code=ErrorCode.INTERNAL_ERROR,
+            msg=get_error_message(ErrorCode.INTERNAL_ERROR)
+        )
+
+
+@router.post("/data/view_signals", summary="View Encrypted Signals")
+async def view_signals(
+        query: ViewSignalsReq = Body(..., description="View Encrypted Signals Request"),
+        user: Optional[dict] = Depends(get_optional_current_user),
+        session: AsyncSession = Depends(get_db)
+):
+    try:
+        data_service = DataService(session)
+        result = await data_service.view_signals(query)
+        return RestResponse(data=result)
+    except CustomAgentException as e:
+        logger.error(f"Error performing view signals: {str(e)}", exc_info=True)
+        return RestResponse(code=e.error_code, msg=e.message)
+    except Exception as e:
+        logger.error(f"Unexpected error in view signals: {str(e)}", exc_info=True)
         return RestResponse(
             code=ErrorCode.INTERNAL_ERROR,
             msg=get_error_message(ErrorCode.INTERNAL_ERROR)

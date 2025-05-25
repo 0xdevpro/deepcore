@@ -25,48 +25,43 @@ Tool Clarify:Could you specify the date range for the data retrieval?
 """
 
 TOOLS_PROMPT = """
-### **2. Tool Invocation Rules**  
+### **2. Tool Invocation Rules**
 
-- **Decision Making**:  
-  - Determine whether to **invoke a tool, combine multiple tool results step by step, or respond directly** based on the query.  
-  - If multiple tools are needed, **invoke them sequentially**, making a decision after each tool's response.  
-  - **If a single tool can fulfill the request, invoke it directly before considering additional tools.**  
+  * **Decision Making**:
 
-- **Format**:  
-  - The JSON **must** be enclosed in triple backticks (```json).  
-  - **Do not include explanations**—only provide the JSON.  
+      * Determine whether to **invoke a tool, combine multiple tool results step by step, or respond directly** based on the query.
+      * If multiple tools are needed, **invoke them sequentially**, making a decision after each tool's response.
+      * **If a single tool can fulfill the request, invoke it directly before considering additional tools.**
 
-- **Response Handling**:  
-  - If a tool’s output fully answers the query, return a **Final Answer** after retrieving the response.  
-  - If additional processing is required, invoke the necessary tool first, then construct the next step.  
+  * **Format**:
 
-- **Restrictions**:  
-  - Do **not** output JSON and a Final Answer in the same step.  
-  - Only invoke **one tool at a time**—each tool's output should be analyzed before deciding on the next step.  
+      * The JSON **must** be enclosed in triple backticks (\`\`\`json).
+      * **Do not include explanations**—only provide the JSON.
+      * **Strict Parameter Structure for API Tools:** For `api` type tools, the `parameters` object **must always contain `header`, `query`, `path`, and `body` as direct children.** All relevant arguments for the API call must be placed within these four categories as defined in the tool's specification. **Refer to the `Correct Example` for `api` type tools below for guidance.**
 
-- **For API Tools**:  
-  - When the tool type is **api**, extracted parameters **must** be structured into four levels: `header`, `query`, `path`, and `body`.  
-  - Do **not** flatten these parameters into a single level.  
+  * **Response Handling**:
 
----
+      * If a tool’s output fully answers the query, return a **Final Answer** after retrieving the response.
+      * If additional processing is required, invoke the necessary tool first, then construct the next step.
 
-### **3. Clarification Handling**  
-- **Only ask for clarification if an essential parameter is missing and cannot be reasonably inferred from the user’s query.**  
-- **If the required parameter can be inferred, use the inferred value instead of asking for clarification.**  
-- If clarification is needed, format the response as follows:  Tool Clarify:[Clarification question]
-- **Avoid unnecessary clarifications**—prioritize efficiency in tool invocation.  
+  * **Restrictions**:
 
----
+      * Do **not** output JSON and a Final Answer in the same step.
+      * Only invoke **one tool at a time**—each tool's output should be analyzed before deciding on the next step.
 
-## **Response Format Examples**  
+-----
 
-### **✅ When Using a Tool**  
-If the tool can directly satisfy the request:  
+## **Response Format Examples**
+
+### **✅ When Using a Tool**
+
+If the tool can directly satisfy the request:
+
 ```json
 {
   "type": "function",
   "function": {
-    "name": "example_tool",
+    "name": "example_function_tool",
     "parameters": {
       "param1": "value1",
       "param2": "value2"
@@ -74,27 +69,40 @@ If the tool can directly satisfy the request:
   }
 }
 ```
-or  
+
+**For `api` type tools (must include `header`, `query`, `path`, `body`):**
+
 ```json
 {
   "type": "api",
   "function": {
-    "name": "example_tool",
+    "name": "example_api_tool",
     "parameters": {
-      "header": {},
-      "query": {},
-      "path": {},
-      "body": {}
+      "header": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      },
+      "query": {
+        "status": "active"
+      },
+      "path": {
+        "userId": "12345"
+      },
+      "body": {
+        "dataField1": "value1",
+        "dataField2": "value2"
+      }
     }
   }
 }
 ```
-or  
+
+**For `mcp` type tools:**
+
 ```json
 {
   "type": "mcp",
   "function": {
-    "name": "example_tool",
+    "name": "example_mcp_tool",
     "parameters": {
       "param1": "value1",
       "param2": "value2"
@@ -103,78 +111,22 @@ or
 }
 ```
 
-## **Response Format Examples**
+### **❌ Incorrect API Tool Example (Flattened Parameters - Avoid This\!)**
 
-### **✅ Correct Example**
-For instance, if the user says:  
-*Generate a formal notification about the latest product update*,  
-the correct API call should be:
+An incorrect API call would flatten the parameters instead of using the required four levels (`header`, `query`, `path`, `body`):
+
 ```json
 {
   "type": "api",
   "function": {
-    "name": "notifyUser",
+    "name": "example_api_tool",
     "parameters": {
-      "header": {},
-      "query": {
-        "message": "Generate a formal notification about the latest product update."
-      },
-      "path": {},
-      "body": {}
+      "message": "This is a flattened parameter. Avoid this!"
     }
   }
 }
 ```
 
-### **❌ Incorrect Example**
-An incorrect API call would flatten the parameters instead of using the required four levels:
-```json
-{
-  "type": "api",
-  "function": {
-    "name": "notifyUser",
-    "parameters": {
-      "message": "Generate a formal notification about the latest product update."
-    }
-  }
-}
-```
 This is incorrect because it does not include the required four levels: `header`, `query`, `path`, and `body`.
-## **Response Format Examples**
 
-### **✅ Correct Example**
-For instance, if the user says:  
-*Generate a formal notification about the latest product update*,  
-the correct API call should be:
-```json
-{
-  "type": "api",
-  "function": {
-    "name": "notifyUser",
-    "parameters": {
-      "header": {},
-      "query": {
-        "message": "Generate a formal notification about the latest product update."
-      },
-      "path": {},
-      "body": {}
-    }
-  }
-}
-```
-
-### **❌ Incorrect Example**
-An incorrect API call would flatten the parameters instead of using the required four levels:
-```json
-{
-  "type": "api",
-  "function": {
-    "name": "notifyUser",
-    "parameters": {
-      "message": "Generate a formal notification about the latest product update."
-    }
-  }
-}
-```
-This is incorrect because it does not include the required four levels: `header`, `query`, `path`, and `body`.
 """
