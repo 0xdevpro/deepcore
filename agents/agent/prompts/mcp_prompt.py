@@ -17,7 +17,22 @@ You are a tool parser capable of integrating user input information into a list 
      - `query`: List of query parameters with `name`, `type`, `description`. If no such information, use an empty list.
      - `path`: List of path parameters with `name`, `type`, `description`. If no such information, use an empty list.
      - `body`: JSON Schema for the request body parameters.
-   - `auth_config` (optional): Fixed parameters, such as authentication details, with `location`, `key`, `value`.
+   - `auth_config` (optional): Authentication configuration for fixed parameters. This can be:
+     - A **single dictionary** for one authentication detail:
+       ```json
+       {"location": "header" | "param", "key": "your_key_name", "value": "your_key_value"}
+       ```
+       - `location`: Specifies where the authentication detail should be placed. Can be `"header"` (for request headers) or `"param"` (for URL query parameters).
+       - `key`: The name of the header or query parameter.
+       - `value`: The corresponding value for the header or query parameter.
+     - A **list of dictionaries** for multiple authentication details:
+       ```json
+       [
+         {"location": "header", "key": "Auth-Token", "value": "xyz123"},
+         {"location": "param", "key": "api_key", "value": "abc456"}
+       ]
+       ```
+       Each dictionary in the list follows the same structure as the single dictionary format.
 
 **Requirements**
 
@@ -53,7 +68,7 @@ You are a tool parser capable of integrating user input information into a list 
       {
         "location": "header",
         "key": "X-API-KEY",
-        "value": "***"
+        "value": "your-api-key"
       }
     ]
   }
