@@ -120,20 +120,36 @@ class DeepAgentExecutor(AgentExecutor):
             if self.api_tools:
                 api_schemas, function_schemas, mcp_schemas = \
                     tools_parser.convert_tool_into_openai_schema(self.api_tools)
+                tools_context = ""
                 if api_schemas:
-                    self.short_memory.add(role="api tool", content=json.dumps(api_schemas, ensure_ascii=False))
+                    tools_context += self._get_tools_context(
+                        tool_type="API",
+                        description="The following API tools are available:",
+                        schemas=api_schemas,
+                    )
                 if function_schemas:
-                    self.short_memory.add(role="function tool", content=json.dumps(function_schemas, ensure_ascii=False))
+                    tools_context += self._get_tools_context(
+                        tool_type="Function",
+                        description="The following Function tools are available:",
+                        schemas=function_schemas,
+                    )
                     self.function_map = {tool.__name__: tool for tool in self.local_tools}
                 if mcp_schemas:
-                    self.short_memory.add(role="mcp tool",
-                                          content=json.dumps(mcp_schemas, ensure_ascii=False))
+                    tools_context += self._get_tools_context(
+                        tool_type="MCP",
+                        description="The following MCP tools are available:",
+                        schemas=mcp_schemas,
+                    )
+                self.short_memory.add(role="Available Tools", content=tools_context)
 
     def _initialize_answer(self):
         self.short_memory.add(role="", content=ANSWER_PROMPT)
 
     def _initialize_clarify(self):
         self.short_memory.add(role="", content=CLARIFY_PROMPT)
+
+    def _get_tools_context(self, tool_type, description, schemas):
+        return f"\n**{tool_type}**\n{description}\n{json.dumps(schemas, ensure_ascii=False, indent=4)}\n"
 
 
     async def stream(
