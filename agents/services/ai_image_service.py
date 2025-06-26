@@ -178,7 +178,8 @@ class AIImageService:
             spend_balance(SpendChangeRequest(
                 tenant_id=user["tenant_id"],
                 amount=Decimal(str(price)),
-                requests_count=1
+                requests_count=1,
+                point=1,
             ))
             record_agent_usage(
                 agent_id=agent_id,

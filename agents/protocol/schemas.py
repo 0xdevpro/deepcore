@@ -472,6 +472,7 @@ class ProfileInfo(BaseModel):
     balance: Decimal = Field(default=Decimal("0.0"))
     total_spend: Decimal = Field(default=Decimal("0.0"))
     total_requests_count: int = Field(default=0)
+    points: int = Field(default=0)
     wallet_address: str = Field(default="", description="User wallet address")
     master_address: str = Field(default="", description="Master wallet address for transactions")
 

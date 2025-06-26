@@ -2,13 +2,15 @@
 # The specific implementation will be provided later
 
 import asyncio
+import json
 import logging
 from datetime import datetime
 from typing import List, Dict, Any, AsyncIterator, Optional
 
 from agents.agent.chat_agent import ChatAgent
 from agents.agent.entity.inner.node_data import NodeMessage
-from agents.agent.tools.message_tool import send_message, send_markdown
+from agents.agent.memory.agent_context_manager import agent_context_manager
+from agents.agent.tools.message_tool import send_markdown
 from agents.models.entity import ChatContext, AgentInfo, ModelInfo
 from agents.agent.llm.default_llm import openai
 from agents.agent.memory.memory import MemoryObject
@@ -37,6 +39,8 @@ class MultiAgent:
         self.max_rounds = max_rounds
         self.agents: List[AgentInfo] = []
         self.global_memory: List[MemoryObject] = []  # Global memory for all agents
+        # Retrieve all context data for the conversation
+        self.context_data = agent_context_manager.get(self.conversation_id)
 
     async def load_agents(self):
         """
@@ -79,14 +83,16 @@ class MultiAgent:
         # Get recent context
         context_text = self.get_recent_context()
         context_prompt = f"\nConversation context:\n{context_text}\n" if context_text else ""
+        temporary = self.init_temporary()
         prompt = (
             f"You are an agent router. Given a user query and a list of agents, "
             f"select the most relevant agent IDs (max {top_k}).\n"
             f"If none of the agents are suitable, output 'none'.\n"
-            f"User Query: {query}\n"
-            f"{context_prompt}"
             f"Agents:\n"
-            f"{agents_text}\n"
+            f"{agents_text}\n\n"
+            f"{context_prompt}"
+            f"User Query: {query}\n"
+            f"{self.init_temporary()}"
             f"Please output a comma-separated list of agent IDs, or 'none' if no agent is suitable."
         )
 
@@ -139,6 +145,11 @@ class MultiAgent:
             conversation_id=self.conversation_id,
             user=self.user or {},
         )
+
+        # If context data is found, add it to the chat context
+        if self.context_data:
+            chat_context.temp_data = self.context_data
+
         chat_agent = ChatAgent(agent, chat_context)
         answered = False
         yield NodeMessage(f"call {agent.name}").to_stream()
@@ -169,3 +180,13 @@ class MultiAgent:
         except Exception as e:
             logger.error(f"Fallback model failed: {e}")
             yield send_markdown("Sorry, I cannot answer your question right now.")
+    def init_temporary(self) -> str:
+        # Add temporary data to short-term memory if available
+        if self.context_data:
+            content = str(self.context_data)
+            try:
+                content = json.dumps(self.context_data, ensure_ascii=True)
+            except Exception as e:
+                logger.warning(f"init_temporary error {e}")
+            return f"Tool Result Data : {content}\n\n"
+        return "\n"

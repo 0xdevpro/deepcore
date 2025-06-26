@@ -197,24 +197,39 @@ async def _create_server_instance(mcp_name: str, user: dict) -> Server:
             return [types.TextContent(type="text", text=f"Unknown tool: {name}")]
             
         try:
-            # Prepare request parameters
+            # Process arguments
             params = {}
             headers = {}
             json_data = {}
+            path = matching_tool.path
+            
             if arguments:
-                if matching_tool.method == "GET":
-                    params = arguments
-                else:
-                    json_data = arguments
-                    headers = {'Content-Type': 'application/json'}
+                # Handle body parameters
+                if 'body' in arguments:
+                    json_data = arguments['body']
+                    headers['Content-Type'] = 'application/json'
+                
+                # Handle query parameters
+                if 'query' in arguments:
+                    params.update(arguments['query'])
+                
+                # Handle path parameters
+                if 'path' in arguments:
+                    for name, value in arguments['path'].items():
+                        path = path.replace(f"{{{name}}}", str(value))
+                
+                # Handle header parameters
+                if 'header' in arguments:
+                    headers.update(arguments['header'])
+            
             # Execute API call
             resp = async_client.request(
                 method=matching_tool.method,
                 base_url=matching_tool.origin,
-                path=matching_tool.path,
+                path=path,
                 params=params,
                 headers=headers,
-                json_data=json_data,
+                json_data=json_data if json_data else None,
                 auth_config=matching_tool.auth_config,
                 stream=False
             )
@@ -646,45 +661,74 @@ def get_main_app():
 
 def _convert_parameters_to_schema(parameters: Dict) -> Dict:
     """
-    Convert tool parameters to MCP input schema
+    Convert tool parameters to MCP input schema that supports both body and other parameter types
     
     Args:
         parameters: Tool parameter definition
         
     Returns:
-        MCP-compliant input schema
+        MCP-compliant input schema with parameter type identification
     """
     schema = {
         "type": "object",
-        "properties": {},
+        "properties": {
+            "body": {
+                "type": "object",
+                "description": "Request body parameters",
+                "properties": {},
+                "required": []
+            },
+            "query": {
+                "type": "object",
+                "description": "Query parameters",
+                "properties": {},
+                "required": []
+            },
+            "path": {
+                "type": "object",
+                "description": "Path parameters",
+                "properties": {},
+                "required": []
+            },
+            "header": {
+                "type": "object",
+                "description": "Header parameters",
+                "properties": {},
+                "required": []
+            }
+        },
         "required": []
     }
     
-    # Handle body parameters
+    # Process body parameters
     if parameters.get('body'):
-        return parameters['body']
+        schema['properties']['body']['properties'] = parameters['body'].get('properties', {})
+        schema['properties']['body']['required'] = parameters['body'].get('required', [])
+        schema['required'].append('body')
     
-    # Handle other parameter types (query, path, header)
+    # Process other parameter types
     for param_type in ['query', 'path', 'header']:
-        for param in parameters.get(param_type, []):
-            name = param.get('name')
-            if not name:
-                continue
+        if parameters.get(param_type):
+            for param in parameters[param_type]:
+                name = param.get('name')
+                if not name:
+                    continue
+                    
+                prop = {
+                    "type": param.get('type', 'string'),
+                    "description": param.get('description', f"{param_type} parameter")
+                }
                 
-            prop = {
-                "type": param.get('type', 'string'),
-                "description": param.get('description', f"{param_type} parameter")
-            }
-            
-            # Add default value if available
-            if 'default' in param:
-                prop['default'] = param['default']
+                if 'default' in param:
+                    prop['default'] = param['default']
+                    
+                schema['properties'][param_type]['properties'][name] = prop
                 
-            schema['properties'][name] = prop
+                if param.get('required'):
+                    schema['properties'][param_type]['required'].append(name)
             
-            # Add required parameters
-            if param.get('required'):
-                schema['required'].append(name)
+            if schema['properties'][param_type]['required']:
+                schema['required'].append(param_type)
     
     return schema
 

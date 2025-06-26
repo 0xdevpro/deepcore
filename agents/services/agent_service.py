@@ -113,7 +113,8 @@ async def dialogue(
             spend_balance(SpendChangeRequest(
                 tenant_id=user["tenant_id"],
                 amount=price,
-                requests_count=1
+                requests_count=1,
+                point=1,
             ))
             # Use record_agent_usage to update stats and log
             record_agent_usage(

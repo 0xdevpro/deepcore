@@ -20,6 +20,7 @@ class SpendChangeRequest(BaseModel):
     tenant_id: str
     amount: Decimal
     requests_count: int = Field(default=1)
+    point: int = Field(default=1)
 
 
 def spend_balance(request: SpendChangeRequest):
@@ -29,7 +30,8 @@ def spend_balance(request: SpendChangeRequest):
             "$inc": {
                 "balance": Decimal128(str(-request.amount)),
                 "total_spend": Decimal128(str(request.amount)),
-                "total_requests_count": request.requests_count
+                "total_requests_count": request.requests_count,
+                "points": request.point
             }
         },
         upsert=True
@@ -50,6 +52,7 @@ async def get_profile_info(user: dict, session: AsyncSession) -> ProfileInfo:
         ret.balance = doc.get("balance", Decimal128("0.0")).to_decimal()
         ret.total_spend = doc.get("total_spend", Decimal128("0.0")).to_decimal()
         ret.total_requests_count = doc.get("total_requests_count", 0)
+        ret.points = doc.get("points", 0)
 
         deposit_history = doc.get("deposit_history", [])
         deposit_history = sorted(
@@ -76,14 +79,15 @@ def get_balance(user: dict) -> Decimal:
     return Decimal("0.0")
 
 
-def record_agent_usage(agent_id: str, user: dict, price: float, query: str, response: str, agent_name: str = None):
+def record_agent_usage(agent_id: str, user: dict, price: float, query: str, response: str,
+                       agent_name: str = None, point: int = 1):
     """
     Update agent usage statistics (user+agent dimension) and insert detailed usage log.
     Store agent_name for easier display and update if changed.
     """
     price = float(price)  # Ensure price is always float
     update_fields = {
-        "$inc": {"requests": 1, "cost": price},
+        "$inc": {"requests": 1, "cost": price, "points": point},
         "$set": {"last_used_time": datetime.datetime.utcnow()}
     }
     if agent_name:
